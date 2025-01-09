@@ -58,8 +58,18 @@ declare global {
       takeScreenshot: () => Promise<void>
       moveWindowLeft: () => Promise<void>
       moveWindowRight: () => Promise<void>
-      openExternal: (url: string) => Promise<void>
+      openExternal: (url: string) => void
       toggleMainWindow: () => Promise<{ success: boolean; error?: string }>
+      triggerScreenshot: () => Promise<{ success: boolean; error?: string }>
+      triggerProcessScreenshots: () => Promise<{
+        success: boolean
+        error?: string
+      }>
+      triggerReset: () => Promise<{ success: boolean; error?: string }>
+      triggerMoveLeft: () => Promise<{ success: boolean; error?: string }>
+      triggerMoveRight: () => Promise<{ success: boolean; error?: string }>
+      triggerMoveUp: () => Promise<{ success: boolean; error?: string }>
+      triggerMoveDown: () => Promise<{ success: boolean; error?: string }>
     }
   }
 }

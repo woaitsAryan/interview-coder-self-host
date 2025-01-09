@@ -135,44 +135,58 @@ const Queue: React.FC<QueueProps> = ({ setView }) => {
           <div className="pt-2 w-fit">
             <div className="text-xs text-white/90 backdrop-blur-md bg-black/60 rounded-lg py-2 px-4 flex items-center justify-center gap-4">
               {/* Show/Hide */}
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] leading-none">Show/Hide</span>
-                <div
-                  className="flex gap-1"
-                  onClick={async () => {
-                    try {
-                      const result = await window.electronAPI.toggleMainWindow()
-                      if (!result.success) {
-                        console.error("Failed to toggle window:", result.error)
-                        showToast("Error", "Failed to toggle window", "error")
-                      }
-                    } catch (error) {
-                      console.error("Error toggling window:", error)
+              <div
+                className="flex items-center gap-2 cursor-pointer rounded px-2 py-1.5 hover:bg-white/10 transition-colors"
+                onClick={async () => {
+                  try {
+                    const result = await window.electronAPI.toggleMainWindow()
+                    if (!result.success) {
+                      console.error("Failed to toggle window:", result.error)
                       showToast("Error", "Failed to toggle window", "error")
                     }
-                  }}
-                >
-                  <button className="bg-white/10  rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
+                  } catch (error) {
+                    console.error("Error toggling window:", error)
+                    showToast("Error", "Failed to toggle window", "error")
+                  }
+                }}
+              >
+                <span className="text-[11px] leading-none">Show/Hide</span>
+                <div className="flex gap-1">
+                  <button className="bg-white/10 rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
                     ⌘
                   </button>
-                  <button className="bg-white/10  rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
+                  <button className="bg-white/10 rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
                     B
                   </button>
                 </div>
               </div>
 
               {/* Screenshot */}
-              <div className="flex items-center gap-2">
+              <div
+                className="flex items-center gap-2 cursor-pointer rounded px-2 py-1.5 hover:bg-white/10 transition-colors"
+                onClick={async () => {
+                  try {
+                    const result = await window.electronAPI.triggerScreenshot()
+                    if (!result.success) {
+                      console.error("Failed to take screenshot:", result.error)
+                      showToast("Error", "Failed to take screenshot", "error")
+                    }
+                  } catch (error) {
+                    console.error("Error taking screenshot:", error)
+                    showToast("Error", "Failed to take screenshot", "error")
+                  }
+                }}
+              >
                 <span className="text-[11px] leading-none truncate">
                   {screenshots.length === 0
                     ? "Take first screenshot"
                     : "Screenshot"}
                 </span>
                 <div className="flex gap-1">
-                  <button className="bg-white/10  rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
+                  <button className="bg-white/10 rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
                     ⌘
                   </button>
-                  <button className="bg-white/10  rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
+                  <button className="bg-white/10 rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
                     H
                   </button>
                 </div>
@@ -180,13 +194,39 @@ const Queue: React.FC<QueueProps> = ({ setView }) => {
 
               {/* Solve Command */}
               {screenshots.length > 0 && (
-                <div className="flex items-center gap-2">
+                <div
+                  className="flex items-center gap-2 cursor-pointer rounded px-2 py-1.5 hover:bg-white/10 transition-colors"
+                  onClick={async () => {
+                    try {
+                      const result =
+                        await window.electronAPI.triggerProcessScreenshots()
+                      if (!result.success) {
+                        console.error(
+                          "Failed to process screenshots:",
+                          result.error
+                        )
+                        showToast(
+                          "Error",
+                          "Failed to process screenshots",
+                          "error"
+                        )
+                      }
+                    } catch (error) {
+                      console.error("Error processing screenshots:", error)
+                      showToast(
+                        "Error",
+                        "Failed to process screenshots",
+                        "error"
+                      )
+                    }
+                  }}
+                >
                   <span className="text-[11px] leading-none">Solve</span>
                   <div className="flex gap-1">
-                    <button className="bg-white/10  rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
+                    <button className="bg-white/10 rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
                       ⌘
                     </button>
-                    <button className="bg-white/10  rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
+                    <button className="bg-white/10 rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
                       ↵
                     </button>
                   </div>
@@ -196,6 +236,7 @@ const Queue: React.FC<QueueProps> = ({ setView }) => {
 
               <QueueCommands
                 onTooltipVisibilityChange={handleTooltipVisibilityChange}
+                screenshotCount={screenshots.length}
               />
             </div>
           </div>

@@ -43,14 +43,23 @@ export class ScreenshotHelper {
   }
 
   public setView(view: "queue" | "solutions"): void {
+    console.log("Setting view in ScreenshotHelper:", view)
+    console.log(
+      "Current queues - Main:",
+      this.screenshotQueue,
+      "Extra:",
+      this.extraScreenshotQueue
+    )
     this.view = view
   }
 
   public getScreenshotQueue(): string[] {
+    console.log("Getting screenshot queue:", this.screenshotQueue)
     return this.screenshotQueue
   }
 
   public getExtraScreenshotQueue(): string[] {
+    console.log("Getting extra screenshot queue:", this.extraScreenshotQueue)
     return this.extraScreenshotQueue
   }
 
@@ -109,6 +118,7 @@ export class ScreenshotHelper {
     hideMainWindow: () => void,
     showMainWindow: () => void
   ): Promise<string> {
+    console.log("Taking screenshot in view:", this.view)
     hideMainWindow()
     await new Promise((resolve) => setTimeout(resolve, 100))
 
@@ -120,32 +130,41 @@ export class ScreenshotHelper {
           ? await this.captureScreenshotMac()
           : await this.captureScreenshotWindows()
 
-      // Save and manage the screenshot
+      // Save and manage the screenshot based on current view
       if (this.view === "queue") {
         screenshotPath = path.join(this.screenshotDir, `${uuidv4()}.png`)
         await fs.promises.writeFile(screenshotPath, screenshotBuffer)
-
+        console.log("Adding screenshot to main queue:", screenshotPath)
         this.screenshotQueue.push(screenshotPath)
         if (this.screenshotQueue.length > this.MAX_SCREENSHOTS) {
           const removedPath = this.screenshotQueue.shift()
           if (removedPath) {
             try {
               await fs.promises.unlink(removedPath)
+              console.log(
+                "Removed old screenshot from main queue:",
+                removedPath
+              )
             } catch (error) {
               console.error("Error removing old screenshot:", error)
             }
           }
         }
       } else {
+        // In solutions view, only add to extra queue
         screenshotPath = path.join(this.extraScreenshotDir, `${uuidv4()}.png`)
         await fs.promises.writeFile(screenshotPath, screenshotBuffer)
-
+        console.log("Adding screenshot to extra queue:", screenshotPath)
         this.extraScreenshotQueue.push(screenshotPath)
         if (this.extraScreenshotQueue.length > this.MAX_SCREENSHOTS) {
           const removedPath = this.extraScreenshotQueue.shift()
           if (removedPath) {
             try {
               await fs.promises.unlink(removedPath)
+              console.log(
+                "Removed old screenshot from extra queue:",
+                removedPath
+              )
             } catch (error) {
               console.error("Error removing old screenshot:", error)
             }
@@ -192,5 +211,19 @@ export class ScreenshotHelper {
       console.error("Error deleting file:", error)
       return { success: false, error: error.message }
     }
+  }
+
+  public clearExtraScreenshotQueue(): void {
+    // Clear extraScreenshotQueue
+    this.extraScreenshotQueue.forEach((screenshotPath) => {
+      fs.unlink(screenshotPath, (err) => {
+        if (err)
+          console.error(
+            `Error deleting extra screenshot at ${screenshotPath}:`,
+            err
+          )
+      })
+    })
+    this.extraScreenshotQueue = []
   }
 }

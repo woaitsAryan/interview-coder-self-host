@@ -41,7 +41,7 @@ export class WindowHelper {
 
     // Use 75% width if debugging has occurred, otherwise use 60%
     const maxAllowedWidth = Math.floor(
-      workArea.width * (this.appState.getHasDebugged() ? 0.75 : 0.4)
+      workArea.width * (this.appState.getHasDebugged() ? 0.75 : 0.5)
     )
 
     // Ensure width doesn't exceed max allowed width and height is reasonable
@@ -106,7 +106,7 @@ export class WindowHelper {
     this.mainWindow = new BrowserWindow(windowSettings)
 
     this.mainWindow.setContentProtection(true)
-    this.mainWindow.webContents.openDevTools()
+    // this.mainWindow.webContents.openDevTools()
 
     // Only call macOS specific methods if running on macOS
     if (isMac) {

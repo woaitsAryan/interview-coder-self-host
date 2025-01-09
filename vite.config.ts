@@ -20,6 +20,7 @@ export default defineConfig(({ command, mode }) => {
             build: {
               outDir: "dist-electron",
               sourcemap: true,
+              minify: false,
               rollupOptions: {
                 external: [
                   "electron",
@@ -36,10 +37,25 @@ export default defineConfig(({ command, mode }) => {
         },
         {
           entry: "electron/preload.ts",
+          vite: {
+            build: {
+              outDir: "dist-electron",
+              sourcemap: true,
+              minify: false,
+              rollupOptions: {
+                external: [
+                  "electron",
+                  ...Object.keys(require("./package.json").dependencies || {})
+                ]
+              }
+            }
+          },
           onstart(options) {
-            // Notify the Renderer process to reload the page when the Preload scripts build is complete,
-            // instead of restarting the entire Electron App.
             options.reload()
+          },
+          watch: {
+            pattern: ["electron/preload.ts"],
+            buildDelay: 0
           }
         }
       ]),
@@ -47,6 +63,18 @@ export default defineConfig(({ command, mode }) => {
     ],
     define: {
       "process.env": env
+    },
+    build: {
+      emptyOutDir: true,
+      outDir: "dist"
+    },
+    clearScreen: true,
+    server: {
+      force: true,
+      watch: {
+        usePolling: true,
+        interval: 100
+      }
     }
   }
 })

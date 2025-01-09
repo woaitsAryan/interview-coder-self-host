@@ -38,6 +38,13 @@ interface ElectronAPI {
   moveWindowRight: () => Promise<void>
   openExternal: (url: string) => void
   toggleMainWindow: () => Promise<{ success: boolean; error?: string }>
+  triggerScreenshot: () => Promise<{ success: boolean; error?: string }>
+  triggerProcessScreenshots: () => Promise<{ success: boolean; error?: string }>
+  triggerReset: () => Promise<{ success: boolean; error?: string }>
+  triggerMoveLeft: () => Promise<{ success: boolean; error?: string }>
+  triggerMoveRight: () => Promise<{ success: boolean; error?: string }>
+  triggerMoveUp: () => Promise<{ success: boolean; error?: string }>
+  triggerMoveDown: () => Promise<{ success: boolean; error?: string }>
 }
 
 export const PROCESSING_EVENTS = {
@@ -71,7 +78,15 @@ const electronAPI = {
   deleteScreenshot: (path: string) =>
     ipcRenderer.invoke("delete-screenshot", path),
   toggleMainWindow: async () => {
-    return ipcRenderer.invoke("toggle-window")
+    console.log("toggleMainWindow called from preload")
+    try {
+      const result = await ipcRenderer.invoke("toggle-window")
+      console.log("toggle-window result:", result)
+      return result
+    } catch (error) {
+      console.error("Error in toggleMainWindow:", error)
+      throw error
+    }
   },
   // Event listeners
   onScreenshotTaken: (
@@ -175,11 +190,27 @@ const electronAPI = {
   },
   moveWindowLeft: () => ipcRenderer.invoke("move-window-left"),
   moveWindowRight: () => ipcRenderer.invoke("move-window-right"),
-  openExternal: (url: string) => shell.openExternal(url)
+  openExternal: (url: string) => shell.openExternal(url),
+  triggerScreenshot: () => ipcRenderer.invoke("trigger-screenshot"),
+  triggerProcessScreenshots: () =>
+    ipcRenderer.invoke("trigger-process-screenshots"),
+  triggerReset: () => ipcRenderer.invoke("trigger-reset"),
+  triggerMoveLeft: () => ipcRenderer.invoke("trigger-move-left"),
+  triggerMoveRight: () => ipcRenderer.invoke("trigger-move-right"),
+  triggerMoveUp: () => ipcRenderer.invoke("trigger-move-up"),
+  triggerMoveDown: () => ipcRenderer.invoke("trigger-move-down")
 } as ElectronAPI
+
+// Before exposing the API
+console.log(
+  "About to expose electronAPI with methods:",
+  Object.keys(electronAPI)
+)
 
 // Expose the API
 contextBridge.exposeInMainWorld("electronAPI", electronAPI)
+
+console.log("electronAPI exposed to window")
 
 // Add this focus restoration handler
 ipcRenderer.on("restore-focus", () => {

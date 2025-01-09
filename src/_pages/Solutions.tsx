@@ -140,20 +140,26 @@ const Solutions: React.FC<SolutionsProps> = ({ setView }) => {
 
   const [isResetting, setIsResetting] = useState(false)
 
-  const { data: extraScreenshots = [], refetch } = useQuery({
-    queryKey: ["extras"],
-    queryFn: async () => {
+  interface Screenshot {
+    path: string
+    preview: string
+  }
+
+  const [extraScreenshots, setExtraScreenshots] = useState<Screenshot[]>([])
+
+  useEffect(() => {
+    const fetchScreenshots = async () => {
       try {
         const existing = await window.electronAPI.getScreenshots()
-        return existing
+        setExtraScreenshots(existing)
       } catch (error) {
         console.error("Error loading extra screenshots:", error)
-        return []
+        setExtraScreenshots([])
       }
-    },
-    staleTime: Infinity,
-    cacheTime: Infinity
-  })
+    }
+
+    fetchScreenshots()
+  }, [solutionData]) // Refetch when solution data changes
 
   const { showToast } = useToast()
 
@@ -182,7 +188,14 @@ const Solutions: React.FC<SolutionsProps> = ({ setView }) => {
 
     // Set up event listeners
     const cleanupFunctions = [
-      window.electronAPI.onScreenshotTaken(() => refetch()),
+      window.electronAPI.onScreenshotTaken(async () => {
+        try {
+          const existing = await window.electronAPI.getScreenshots()
+          setExtraScreenshots(existing)
+        } catch (error) {
+          console.error("Error loading extra screenshots:", error)
+        }
+      }),
       window.electronAPI.onResetView(() => {
         // Set resetting state first
         setIsResetting(true)
@@ -191,8 +204,8 @@ const Solutions: React.FC<SolutionsProps> = ({ setView }) => {
         queryClient.removeQueries(["solution"])
         queryClient.removeQueries(["new_solution"])
 
-        // Reset other states
-        refetch()
+        // Reset screenshots
+        setExtraScreenshots([])
 
         // After a small delay, clear the resetting state
         setTimeout(() => {
@@ -244,6 +257,17 @@ const Solutions: React.FC<SolutionsProps> = ({ setView }) => {
         setThoughtsData(solutionData.thoughts || null)
         setTimeComplexityData(solutionData.time_complexity || null)
         setSpaceComplexityData(solutionData.space_complexity || null)
+
+        // Fetch latest screenshots when solution is successful
+        const fetchScreenshots = async () => {
+          try {
+            const existing = await window.electronAPI.getScreenshots()
+            setExtraScreenshots(existing)
+          } catch (error) {
+            console.error("Error loading extra screenshots:", error)
+          }
+        }
+        fetchScreenshots()
       }),
 
       //########################################################
@@ -336,19 +360,6 @@ const Solutions: React.FC<SolutionsProps> = ({ setView }) => {
     }
   }
 
-  const handleResetApiKey = async () => {
-    try {
-      const result = await window.electronAPI.clearStore()
-      if (result.success) {
-        window.location.reload()
-      } else {
-        showToast("Error", "Failed to reset API key", "error")
-      }
-    } catch (error) {
-      showToast("Error", "Failed to reset API key", "error")
-    }
-  }
-
   return (
     <>
       {!isResetting && queryClient.getQueryData(["new_solution"]) ? (
@@ -379,6 +390,7 @@ const Solutions: React.FC<SolutionsProps> = ({ setView }) => {
           <SolutionCommands
             extraScreenshots={extraScreenshots}
             onTooltipVisibilityChange={handleTooltipVisibilityChange}
+            isProcessing={!problemStatementData || !solutionData}
           />
 
           {/* Main Content - Modified width constraints */}

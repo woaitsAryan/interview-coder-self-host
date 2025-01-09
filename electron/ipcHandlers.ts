@@ -43,22 +43,32 @@ export function initializeIpcHandlers(appState: AppState): void {
   ipcMain.handle("get-screenshots", async () => {
     try {
       let previews = []
-      if (appState.getView() === "queue") {
+      const currentView = appState.getView()
+      console.log("Getting screenshots for view:", currentView)
+
+      if (currentView === "queue") {
+        const queue = appState.getScreenshotQueue()
+        console.log("Main queue contents:", queue)
         previews = await Promise.all(
-          appState.getScreenshotQueue().map(async (path) => ({
+          queue.map(async (path) => ({
             path,
             preview: await appState.getImagePreview(path)
           }))
         )
       } else {
+        const extraQueue = appState.getExtraScreenshotQueue()
+        console.log("Extra queue contents:", extraQueue)
         previews = await Promise.all(
-          appState.getExtraScreenshotQueue().map(async (path) => ({
+          extraQueue.map(async (path) => ({
             path,
             preview: await appState.getImagePreview(path)
           }))
         )
       }
-
+      console.log(
+        "Returning previews:",
+        previews.map((p) => p.path)
+      )
       return previews
     } catch (error) {
       console.error("Error getting screenshots:", error)
@@ -67,6 +77,7 @@ export function initializeIpcHandlers(appState: AppState): void {
   })
 
   ipcMain.handle("toggle-window", async () => {
+    console.log("toggle-window handler called")
     try {
       appState.toggleMainWindow()
       console.log("Window toggled successfully")
@@ -84,6 +95,89 @@ export function initializeIpcHandlers(appState: AppState): void {
     } catch (error: any) {
       console.error("Error resetting queues:", error)
       return { success: false, error: error.message }
+    }
+  })
+
+  // Take Screenshot (Command + H)
+  ipcMain.handle("trigger-screenshot", async () => {
+    const mainWindow = appState.getMainWindow()
+    if (mainWindow) {
+      try {
+        const screenshotPath = await appState.takeScreenshot()
+        const preview = await appState.getImagePreview(screenshotPath)
+        mainWindow.webContents.send("screenshot-taken", {
+          path: screenshotPath,
+          preview
+        })
+        return { success: true }
+      } catch (error) {
+        console.error("Error capturing screenshot:", error)
+        return { success: false, error: String(error) }
+      }
+    }
+    return { success: false, error: "No main window found" }
+  })
+
+  // Process Screenshots (Command + Enter)
+  ipcMain.handle("trigger-process-screenshots", async () => {
+    try {
+      await appState.processingHelper.processScreenshots()
+      return { success: true }
+    } catch (error) {
+      return { success: false, error: String(error) }
+    }
+  })
+
+  // Reset (Command + R)
+  ipcMain.handle("trigger-reset", () => {
+    try {
+      appState.processingHelper.cancelOngoingRequests()
+      appState.clearQueues()
+      appState.setView("queue")
+      const mainWindow = appState.getMainWindow()
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send("reset-view")
+      }
+      return { success: true }
+    } catch (error) {
+      return { success: false, error: String(error) }
+    }
+  })
+
+  // Window Movement
+  ipcMain.handle("trigger-move-left", () => {
+    try {
+      appState.moveWindowLeft()
+      return { success: true }
+    } catch (error) {
+      return { success: false, error: String(error) }
+    }
+  })
+
+  ipcMain.handle("trigger-move-right", () => {
+    try {
+      appState.moveWindowRight()
+      return { success: true }
+    } catch (error) {
+      return { success: false, error: String(error) }
+    }
+  })
+
+  ipcMain.handle("trigger-move-up", () => {
+    try {
+      appState.moveWindowUp()
+      return { success: true }
+    } catch (error) {
+      return { success: false, error: String(error) }
+    }
+  })
+
+  ipcMain.handle("trigger-move-down", () => {
+    try {
+      appState.moveWindowDown()
+      return { success: true }
+    } catch (error) {
+      return { success: false, error: String(error) }
     }
   })
 }

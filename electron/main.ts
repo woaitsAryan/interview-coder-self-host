@@ -108,7 +108,9 @@ export class AppState {
   }
 
   public setView(view: "queue" | "solutions"): void {
+    // Set view state before updating screenshot helper
     this.view = view
+    // Update screenshot helper's view state
     this.screenshotHelper.setView(view)
   }
 

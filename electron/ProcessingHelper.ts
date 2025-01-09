@@ -28,9 +28,11 @@ export class ProcessingHelper {
     if (!mainWindow) return
 
     const view = this.appState.getView()
+    console.log("Processing screenshots in view:", view)
 
     if (view === "queue") {
       const screenshotQueue = this.screenshotHelper.getScreenshotQueue()
+      console.log("Processing main queue screenshots:", screenshotQueue)
       if (screenshotQueue.length === 0) {
         mainWindow.webContents.send(
           this.appState.PROCESSING_EVENTS.NO_SCREENSHOTS
@@ -58,7 +60,7 @@ export class ProcessingHelper {
         const result = await this.processScreenshotsHelper(screenshots, signal)
 
         if (!result.success) {
-          console.error("Processing failed:", result.error)
+          console.log("Processing failed:", result.error)
           if (result.error?.includes("API Key out of credits")) {
             mainWindow.webContents.send(
               this.appState.PROCESSING_EVENTS.API_KEY_OUT_OF_CREDITS
@@ -75,11 +77,13 @@ export class ProcessingHelper {
             )
           }
           // Reset view back to queue on error
+          console.log("Resetting view to queue due to error")
           this.appState.setView("queue")
           return
         }
 
         // Only set view to solutions if processing succeeded
+        console.log("Setting view to solutions after successful processing")
         this.appState.setView("solutions")
       } catch (error: any) {
         console.error("Processing error:", error)
@@ -95,6 +99,7 @@ export class ProcessingHelper {
           )
         }
         // Reset view back to queue on error
+        console.log("Resetting view to queue due to error")
         this.appState.setView("queue")
       } finally {
         this.currentProcessingAbortController = null
@@ -103,6 +108,7 @@ export class ProcessingHelper {
       // view == 'solutions'
       const extraScreenshotQueue =
         this.screenshotHelper.getExtraScreenshotQueue()
+      console.log("Processing extra queue screenshots:", extraScreenshotQueue)
       if (extraScreenshotQueue.length === 0) {
         mainWindow.webContents.send(
           this.appState.PROCESSING_EVENTS.NO_SCREENSHOTS
@@ -125,6 +131,10 @@ export class ProcessingHelper {
             preview: await this.screenshotHelper.getImagePreview(path),
             data: fs.readFileSync(path).toString("base64") // Read image data
           }))
+        )
+        console.log(
+          "Combined screenshots for processing:",
+          screenshots.map((s) => s.path)
         )
 
         const result = await this.processExtraScreenshotsHelper(
@@ -196,6 +206,10 @@ export class ProcessingHelper {
       if (mainWindow) {
         const solutionsResult = await this.generateSolutionsHelper(signal)
         if (solutionsResult.success) {
+          // Clear any existing extra screenshots before transitioning to solutions view
+          this.screenshotHelper.clearExtraScreenshotQueue()
+          // Set view to solutions BEFORE sending success event
+          this.appState.setView("solutions")
           mainWindow.webContents.send(
             this.appState.PROCESSING_EVENTS.SOLUTION_SUCCESS,
             solutionsResult.data

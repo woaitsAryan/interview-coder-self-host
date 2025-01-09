@@ -362,6 +362,7 @@ const Debug: React.FC<DebugProps> = ({ isProcessing, setIsProcessing }) => {
       <SolutionCommands
         extraScreenshots={extraScreenshots}
         onTooltipVisibilityChange={handleTooltipVisibilityChange}
+        isProcessing={isProcessing}
       />
 
       {/* Main Content */}

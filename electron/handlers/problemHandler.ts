@@ -389,7 +389,7 @@ Format Requirements:
     const response = await axios.post(
       "https://api.openai.com/v1/chat/completions",
       {
-        model: "o1-mini",
+        model: "gpt-4o-mini",
         messages: [
           {
             role: "user",
@@ -589,7 +589,7 @@ IMPORTANT FORMATTING NOTES:
 
   // Prepare the payload for the API call
   const payload = {
-    model: "gpt-4o",
+    model: "gpt-4o-mini",
     messages: messages,
     max_tokens: 4000,
     temperature: 0,

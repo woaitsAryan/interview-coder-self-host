@@ -3,10 +3,12 @@ import { useToast } from "../../App"
 
 interface QueueCommandsProps {
   onTooltipVisibilityChange: (visible: boolean, height: number) => void
+  screenshotCount?: number
 }
 
 const QueueCommands: React.FC<QueueCommandsProps> = ({
-  onTooltipVisibilityChange
+  onTooltipVisibilityChange,
+  screenshotCount = 0
 }) => {
   const [isTooltipVisible, setIsTooltipVisible] = useState(false)
   const tooltipRef = useRef<HTMLDivElement>(null)
@@ -28,7 +30,7 @@ const QueueCommands: React.FC<QueueCommandsProps> = ({
   useEffect(() => {
     let tooltipHeight = 0
     if (tooltipRef.current && isTooltipVisible) {
-      tooltipHeight = tooltipRef.current.offsetHeight + 10 // Adding margin/padding if necessary
+      tooltipHeight = tooltipRef.current.offsetHeight + 10
     }
     onTooltipVisibilityChange(isTooltipVisible, tooltipHeight)
   }, [isTooltipVisible])
@@ -72,62 +74,126 @@ const QueueCommands: React.FC<QueueCommandsProps> = ({
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
         >
+          <div className="absolute -top-2 right-0 w-full h-2" />
           <div className="p-3 text-xs bg-black/80 backdrop-blur-md rounded-lg border border-white/10 text-white/90 shadow-lg">
             <div className="space-y-4">
               <h3 className="font-medium truncate">Keyboard Shortcuts</h3>
               <div className="space-y-3">
                 {/* Toggle Command */}
-                <div className="space-y-1">
+                <div
+                  className="cursor-pointer rounded px-2 py-1.5 hover:bg-white/10 transition-colors"
+                  onClick={async () => {
+                    try {
+                      const result = await window.electronAPI.toggleMainWindow()
+                      if (!result.success) {
+                        console.error("Failed to toggle window:", result.error)
+                        showToast("Error", "Failed to toggle window", "error")
+                      }
+                    } catch (error) {
+                      console.error("Error toggling window:", error)
+                      showToast("Error", "Failed to toggle window", "error")
+                    }
+                  }}
+                >
                   <div className="flex items-center justify-between">
                     <span className="truncate">Toggle Window</span>
                     <div className="flex gap-1 flex-shrink-0">
-                      <span className="bg-white/10 px-1.5 py-0.5 rounded text-[10px] leading-none">
+                      <span className="bg-white/20 px-1.5 py-0.5 rounded text-[10px] leading-none">
                         ⌘
                       </span>
-                      <span className="bg-white/10 px-1.5 py-0.5 rounded text-[10px] leading-none">
+                      <span className="bg-white/20 px-1.5 py-0.5 rounded text-[10px] leading-none">
                         B
                       </span>
                     </div>
                   </div>
-                  <p className="text-[10px] leading-relaxed text-white/70 truncate">
+                  <p className="text-[10px] leading-relaxed text-white/70 truncate mt-1">
                     Show or hide this window.
                   </p>
                 </div>
+
                 {/* Screenshot Command */}
-                <div className="space-y-1">
+                <div
+                  className="cursor-pointer rounded px-2 py-1.5 hover:bg-white/10 transition-colors"
+                  onClick={async () => {
+                    try {
+                      const result =
+                        await window.electronAPI.triggerScreenshot()
+                      if (!result.success) {
+                        console.error(
+                          "Failed to take screenshot:",
+                          result.error
+                        )
+                        showToast("Error", "Failed to take screenshot", "error")
+                      }
+                    } catch (error) {
+                      console.error("Error taking screenshot:", error)
+                      showToast("Error", "Failed to take screenshot", "error")
+                    }
+                  }}
+                >
                   <div className="flex items-center justify-between">
                     <span className="truncate">Take Screenshot</span>
                     <div className="flex gap-1 flex-shrink-0">
-                      <span className="bg-white/10 px-1.5 py-0.5 rounded text-[10px] leading-none">
+                      <span className="bg-white/20 px-1.5 py-0.5 rounded text-[10px] leading-none">
                         ⌘
                       </span>
-                      <span className="bg-white/10 px-1.5 py-0.5 rounded text-[10px] leading-none">
+                      <span className="bg-white/20 px-1.5 py-0.5 rounded text-[10px] leading-none">
                         H
                       </span>
                     </div>
                   </div>
-                  <p className="text-[10px] leading-relaxed text-white/70 truncate">
-                    Take a screenshot of the problem description. The tool will
-                    extract and analyze the problem. The 5 latest screenshots
-                    are saved.
+                  <p className="text-[10px] leading-relaxed text-white/70 truncate mt-1">
+                    Take a screenshot of the problem description.
                   </p>
                 </div>
 
                 {/* Solve Command */}
-                <div className="space-y-1">
+                <div
+                  className={`cursor-pointer rounded px-2 py-1.5 hover:bg-white/10 transition-colors ${
+                    screenshotCount > 0 ? "" : "opacity-50 cursor-not-allowed"
+                  }`}
+                  onClick={async () => {
+                    if (screenshotCount === 0) return
+
+                    try {
+                      const result =
+                        await window.electronAPI.triggerProcessScreenshots()
+                      if (!result.success) {
+                        console.error(
+                          "Failed to process screenshots:",
+                          result.error
+                        )
+                        showToast(
+                          "Error",
+                          "Failed to process screenshots",
+                          "error"
+                        )
+                      }
+                    } catch (error) {
+                      console.error("Error processing screenshots:", error)
+                      showToast(
+                        "Error",
+                        "Failed to process screenshots",
+                        "error"
+                      )
+                    }
+                  }}
+                >
                   <div className="flex items-center justify-between">
                     <span className="truncate">Solve Problem</span>
                     <div className="flex gap-1 flex-shrink-0">
-                      <span className="bg-white/10 px-1.5 py-0.5 rounded text-[10px] leading-none">
+                      <span className="bg-white/20 px-1.5 py-0.5 rounded text-[10px] leading-none">
                         ⌘
                       </span>
-                      <span className="bg-white/10 px-1.5 py-0.5 rounded text-[10px] leading-none">
+                      <span className="bg-white/20 px-1.5 py-0.5 rounded text-[10px] leading-none">
                         ↵
                       </span>
                     </div>
                   </div>
-                  <p className="text-[10px] leading-relaxed text-white/70 truncate">
-                    Generate a solution based on the current problem.
+                  <p className="text-[10px] leading-relaxed text-white/70 truncate mt-1">
+                    {screenshotCount > 0
+                      ? "Generate a solution based on the current problem."
+                      : "Take a screenshot first to generate a solution."}
                   </p>
                 </div>
               </div>
