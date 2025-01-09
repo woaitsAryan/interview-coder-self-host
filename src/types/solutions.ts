@@ -10,21 +10,56 @@ export interface SolutionsResponse {
 }
 
 export interface ProblemStatementData {
-  problem_statement: string;
+  problem_statement: string
   input_format: {
-    description: string;
-    parameters: any[];
-  };
+    description: string
+    parameters: any[]
+  }
   output_format: {
-    description: string;
-    type: string;
-    subtype: string;
-  };
+    description: string
+    type: string
+    subtype: string
+  }
   complexity: {
-    time: string;
-    space: string;
-  };
-  test_cases: any[];
-  validation_type: string;
-  difficulty: string;
+    time: string
+    space: string
+  }
+  test_cases: any[]
+  validation_type: string
+  difficulty: string
+}
+
+declare global {
+  interface Window {
+    electronAPI: {
+      updateContentDimensions: (dimensions: {
+        width: number
+        height: number
+      }) => Promise<void>
+      clearStore: () => Promise<{ success: boolean; error?: string }>
+      getScreenshots: () => Promise<{ path: string; preview: string }[]>
+      deleteScreenshot: (
+        path: string
+      ) => Promise<{ success: boolean; error?: string }>
+      onScreenshotTaken: (
+        callback: (data: { path: string; preview: string }) => void
+      ) => () => void
+      onSolutionsReady: (callback: (solutions: string) => void) => () => void
+      onResetView: (callback: () => void) => () => void
+      onSolutionStart: (callback: () => void) => () => void
+      onDebugStart: (callback: () => void) => () => void
+      onDebugSuccess: (callback: (data: any) => void) => () => void
+      onSolutionError: (callback: (error: string) => void) => () => void
+      onProcessingNoScreenshots: (callback: () => void) => () => void
+      onProblemExtracted: (callback: (data: any) => void) => () => void
+      onSolutionSuccess: (callback: (data: any) => void) => () => void
+      onUnauthorized: (callback: () => void) => () => void
+      onDebugError: (callback: (error: string) => void) => () => void
+      takeScreenshot: () => Promise<void>
+      moveWindowLeft: () => Promise<void>
+      moveWindowRight: () => Promise<void>
+      openExternal: (url: string) => Promise<void>
+      toggleMainWindow: () => Promise<{ success: boolean; error?: string }>
+    }
+  }
 }

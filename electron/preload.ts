@@ -1,3 +1,4 @@
+console.log("Preload script starting...")
 import { contextBridge, ipcRenderer } from "electron"
 const { shell } = require("electron")
 
@@ -36,6 +37,7 @@ interface ElectronAPI {
   moveWindowLeft: () => Promise<void>
   moveWindowRight: () => Promise<void>
   openExternal: (url: string) => void
+  toggleMainWindow: () => Promise<{ success: boolean; error?: string }>
 }
 
 export const PROCESSING_EVENTS = {
@@ -57,17 +59,20 @@ export const PROCESSING_EVENTS = {
   DEBUG_ERROR: "debug-error"
 } as const
 
-// Expose the Electron API to the renderer process
-contextBridge.exposeInMainWorld("electronAPI", {
+// At the top of the file
+console.log("Preload script is running")
+
+const electronAPI = {
   updateContentDimensions: (dimensions: { width: number; height: number }) =>
     ipcRenderer.invoke("update-content-dimensions", dimensions),
-
   clearStore: () => ipcRenderer.invoke("clear-store"),
   takeScreenshot: () => ipcRenderer.invoke("take-screenshot"),
   getScreenshots: () => ipcRenderer.invoke("get-screenshots"),
   deleteScreenshot: (path: string) =>
     ipcRenderer.invoke("delete-screenshot", path),
-
+  toggleMainWindow: async () => {
+    return ipcRenderer.invoke("toggle-window")
+  },
   // Event listeners
   onScreenshotTaken: (
     callback: (data: { path: string; preview: string }) => void
@@ -171,7 +176,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
   moveWindowLeft: () => ipcRenderer.invoke("move-window-left"),
   moveWindowRight: () => ipcRenderer.invoke("move-window-right"),
   openExternal: (url: string) => shell.openExternal(url)
-} as ElectronAPI)
+} as ElectronAPI
+
+// Expose the API
+contextBridge.exposeInMainWorld("electronAPI", electronAPI)
 
 // Add this focus restoration handler
 ipcRenderer.on("restore-focus", () => {

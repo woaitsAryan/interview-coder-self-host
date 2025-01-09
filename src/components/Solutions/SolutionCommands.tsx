@@ -52,10 +52,10 @@ const ExtraScreenshotsQueueCommands: React.FC<
           <div className="flex items-center gap-2 whitespace-nowrap">
             <span className="text-[11px] leading-none">Show/Hide</span>
             <div className="flex gap-1">
-              <button className="bg-white/10 hover:bg-white/20 transition-colors rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
+              <button className="bg-white/10  rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
                 ⌘
               </button>
-              <button className="bg-white/10 hover:bg-white/20 transition-colors rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
+              <button className="bg-white/10  rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
                 B
               </button>
             </div>
@@ -69,10 +69,10 @@ const ExtraScreenshotsQueueCommands: React.FC<
                 : "Screenshot"}
             </span>
             <div className="flex gap-1">
-              <button className="bg-white/10 hover:bg-white/20 transition-colors rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
+              <button className="bg-white/10  rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
                 ⌘
               </button>
-              <button className="bg-white/10 hover:bg-white/20 transition-colors rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
+              <button className="bg-white/10  rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
                 H
               </button>
             </div>
@@ -81,10 +81,10 @@ const ExtraScreenshotsQueueCommands: React.FC<
             <div className="flex items-center gap-2 whitespace-nowrap">
               <span className="text-[11px] leading-none">Debug</span>
               <div className="flex gap-1">
-                <button className="bg-white/10 hover:bg-white/20 transition-colors rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
+                <button className="bg-white/10  rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
                   ⌘
                 </button>
-                <button className="bg-white/10 hover:bg-white/20 transition-colors rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
+                <button className="bg-white/10  rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
                   ↵
                 </button>
               </div>
@@ -95,10 +95,10 @@ const ExtraScreenshotsQueueCommands: React.FC<
           <div className="flex items-center gap-2 whitespace-nowrap">
             <span className="text-[11px] leading-none">Start over</span>
             <div className="flex gap-1">
-              <button className="bg-white/10 hover:bg-white/20 transition-colors rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
+              <button className="bg-white/10  rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
                 ⌘
               </button>
-              <button className="bg-white/10 hover:bg-white/20 transition-colors rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
+              <button className="bg-white/10  rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
                 R
               </button>
             </div>

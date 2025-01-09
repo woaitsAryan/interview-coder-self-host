@@ -25,9 +25,6 @@ export class WindowHelper {
   private currentX: number = 0
   private currentY: number = 0
 
-  // Add this property to track focus
-  private wasFocused: boolean = false
-
   constructor(appState: AppState) {
     this.appState = appState
   }
@@ -77,8 +74,12 @@ export class WindowHelper {
     this.screenWidth = workArea.width
     this.screenHeight = workArea.height
 
-    this.step = Math.floor(this.screenWidth / 10) // 10 steps
-    this.currentX = 0 // Start at the left
+    this.step = Math.floor(this.screenWidth / 10)
+    this.currentX = 0
+
+    const preloadPath = path.join(__dirname, "preload.js")
+    console.log("Creating window with preload path:", preloadPath)
+    console.log("Preload file exists:", require("fs").existsSync(preloadPath))
 
     const windowSettings: Electron.BrowserWindowConstructorOptions = {
       height: 600,
@@ -87,7 +88,7 @@ export class WindowHelper {
       x: this.currentX,
       y: 0,
       webPreferences: {
-        nodeIntegration: true,
+        nodeIntegration: false,
         contextIsolation: true,
         preload: path.join(__dirname, "preload.js")
       },
@@ -105,7 +106,7 @@ export class WindowHelper {
     this.mainWindow = new BrowserWindow(windowSettings)
 
     this.mainWindow.setContentProtection(true)
-    // this.mainWindow.webContents.openDevTools()
+    this.mainWindow.webContents.openDevTools()
 
     // Only call macOS specific methods if running on macOS
     if (isMac) {
@@ -129,6 +130,25 @@ export class WindowHelper {
 
     this.setupWindowListeners()
     this.isWindowVisible = true
+
+    this.mainWindow.webContents.on("did-finish-load", () => {
+      console.log("Window loaded, checking if electronAPI exists...")
+      this.mainWindow.webContents.executeJavaScript(`
+        console.log("Window JavaScript context:", {
+          hasElectronAPI: !!window.electronAPI,
+          apiMethods: window.electronAPI ? Object.keys(window.electronAPI) : [],
+          toggleMainWindow: window.electronAPI ? typeof window.electronAPI.toggleMainWindow : 'undefined'
+        });
+      `)
+    })
+
+    // Also add error handler
+    this.mainWindow.webContents.on(
+      "preload-error",
+      (event, preloadPath, error) => {
+        console.error("Preload script error:", { preloadPath, error })
+      }
+    )
   }
 
   private setupWindowListeners(): void {
@@ -171,9 +191,6 @@ export class WindowHelper {
       console.warn("Main window does not exist or is destroyed.")
       return
     }
-
-    // Store focus state before hiding
-    this.wasFocused = this.mainWindow.isFocused()
 
     const bounds = this.mainWindow.getBounds()
     this.windowPosition = { x: bounds.x, y: bounds.y }

@@ -33,6 +33,14 @@ export default defineConfig(({ command, mode }) => {
               }
             }
           }
+        },
+        {
+          entry: "electron/preload.ts",
+          onstart(options) {
+            // Notify the Renderer process to reload the page when the Preload scripts build is complete,
+            // instead of restarting the entire Electron App.
+            options.reload()
+          }
         }
       ]),
       renderer()

@@ -137,11 +137,25 @@ const Queue: React.FC<QueueProps> = ({ setView }) => {
               {/* Show/Hide */}
               <div className="flex items-center gap-2">
                 <span className="text-[11px] leading-none">Show/Hide</span>
-                <div className="flex gap-1">
-                  <button className="bg-white/10 hover:bg-white/20 transition-colors rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
+                <div
+                  className="flex gap-1"
+                  onClick={async () => {
+                    try {
+                      const result = await window.electronAPI.toggleMainWindow()
+                      if (!result.success) {
+                        console.error("Failed to toggle window:", result.error)
+                        showToast("Error", "Failed to toggle window", "error")
+                      }
+                    } catch (error) {
+                      console.error("Error toggling window:", error)
+                      showToast("Error", "Failed to toggle window", "error")
+                    }
+                  }}
+                >
+                  <button className="bg-white/10  rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
                     ⌘
                   </button>
-                  <button className="bg-white/10 hover:bg-white/20 transition-colors rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
+                  <button className="bg-white/10  rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
                     B
                   </button>
                 </div>
@@ -155,10 +169,10 @@ const Queue: React.FC<QueueProps> = ({ setView }) => {
                     : "Screenshot"}
                 </span>
                 <div className="flex gap-1">
-                  <button className="bg-white/10 hover:bg-white/20 transition-colors rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
+                  <button className="bg-white/10  rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
                     ⌘
                   </button>
-                  <button className="bg-white/10 hover:bg-white/20 transition-colors rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
+                  <button className="bg-white/10  rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
                     H
                   </button>
                 </div>
@@ -169,10 +183,10 @@ const Queue: React.FC<QueueProps> = ({ setView }) => {
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] leading-none">Solve</span>
                   <div className="flex gap-1">
-                    <button className="bg-white/10 hover:bg-white/20 transition-colors rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
+                    <button className="bg-white/10  rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
                       ⌘
                     </button>
-                    <button className="bg-white/10 hover:bg-white/20 transition-colors rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
+                    <button className="bg-white/10  rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
                       ↵
                     </button>
                   </div>

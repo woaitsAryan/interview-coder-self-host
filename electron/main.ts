@@ -248,6 +248,9 @@ async function initializeApp() {
 
   app.dock?.hide() // Hide dock icon (optional)
   app.commandLine.appendSwitch("disable-background-timer-throttling")
+
+  console.log("Preload script path:", path.join(__dirname, "preload.js"))
+  console.log("__dirname:", __dirname)
 }
 
 // Start the application

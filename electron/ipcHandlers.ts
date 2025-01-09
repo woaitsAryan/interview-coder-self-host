@@ -5,6 +5,8 @@ import { AppState } from "./main"
 import { store } from "./store"
 
 export function initializeIpcHandlers(appState: AppState): void {
+  console.log("Initializing IPC handlers")
+
   ipcMain.handle(
     "update-content-dimensions",
     async (event, { width, height }: { width: number; height: number }) => {
@@ -65,13 +67,19 @@ export function initializeIpcHandlers(appState: AppState): void {
   })
 
   ipcMain.handle("toggle-window", async () => {
-    appState.toggleMainWindow()
+    try {
+      appState.toggleMainWindow()
+      console.log("Window toggled successfully")
+      return { success: true }
+    } catch (error) {
+      console.error("Error in toggle-window handler:", error)
+      return { success: false, error: String(error) }
+    }
   })
 
   ipcMain.handle("reset-queues", async () => {
     try {
       appState.clearQueues()
-
       return { success: true }
     } catch (error: any) {
       console.error("Error resetting queues:", error)
