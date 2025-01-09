@@ -6,8 +6,7 @@ import path from "path"
 // Add timeout wrapper
 const TIMEOUT_DURATION = 60000 // 1 minute in milliseconds
 
-// Production version - commented out
-/*
+// Production version
 async function withTimeout<T>(
   promise: Promise<T>,
   timeoutMs: number = TIMEOUT_DURATION
@@ -29,9 +28,9 @@ async function withTimeout<T>(
     throw error
   }
 }
-*/
 
-// Test version with artificial delay
+// Test version with artificial delay - commented out
+/*
 async function withTimeout<T>(
   promise: Promise<T>,
   timeoutMs: number = TIMEOUT_DURATION
@@ -65,6 +64,7 @@ async function withTimeout<T>(
     throw error
   }
 }
+*/
 
 // Load environment variables from .env file
 
