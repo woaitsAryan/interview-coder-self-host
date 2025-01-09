@@ -54,7 +54,6 @@ export class ScreenshotHelper {
   }
 
   public getScreenshotQueue(): string[] {
-    console.log("Getting screenshot queue:", this.screenshotQueue)
     return this.screenshotQueue
   }
 

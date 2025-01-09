@@ -196,6 +196,25 @@ export class ProcessingHelper {
           )
         }
       } catch (error: any) {
+        if (error.message?.includes("Operation timed out")) {
+          // Cancel ongoing API requests
+          this.cancelOngoingRequests()
+          // Clear both screenshot queues
+          this.appState.clearQueues()
+          // Update view state to queue
+          this.appState.setView("queue")
+          // Notify renderer to switch view
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send("reset-view")
+            mainWindow.webContents.send(
+              this.appState.PROCESSING_EVENTS.INITIAL_SOLUTION_ERROR,
+              "Operation timed out after 1 minute. Please try again."
+            )
+          }
+          throw new Error(
+            "Operation timed out after 1 minute. Please try again."
+          )
+        }
         if (error.message?.includes("API Key out of credits")) {
           throw new Error(error.message)
         }
@@ -244,6 +263,27 @@ export class ProcessingHelper {
     } catch (error: any) {
       const mainWindow = this.appState.getMainWindow()
 
+      if (error.message?.includes("Operation timed out")) {
+        // Cancel ongoing API requests
+        this.cancelOngoingRequests()
+        // Clear both screenshot queues
+        this.appState.clearQueues()
+        // Update view state to queue
+        this.appState.setView("queue")
+        // Notify renderer to switch view
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send("reset-view")
+          mainWindow.webContents.send(
+            this.appState.PROCESSING_EVENTS.INITIAL_SOLUTION_ERROR,
+            "Operation timed out after 1 minute. Please try again."
+          )
+        }
+        return {
+          success: false,
+          error: "Operation timed out after 1 minute. Please try again."
+        }
+      }
+
       // Check if error message indicates API key out of credits
       if (error.message?.includes("API Key out of credits")) {
         if (mainWindow) {
@@ -253,6 +293,7 @@ export class ProcessingHelper {
         }
         return { success: false, error: error.message }
       }
+
       if (
         error.message?.includes(
           "Please close this window and re-enter a valid Open AI API key."
@@ -295,6 +336,27 @@ export class ProcessingHelper {
       return { success: true, data: debugSolutions }
     } catch (error: any) {
       const mainWindow = this.appState.getMainWindow()
+
+      if (error.message?.includes("Operation timed out")) {
+        // Cancel ongoing API requests
+        this.cancelOngoingRequests()
+        // Clear both screenshot queues
+        this.appState.clearQueues()
+        // Update view state to queue
+        this.appState.setView("queue")
+        // Notify renderer to switch view
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send("reset-view")
+          mainWindow.webContents.send(
+            this.appState.PROCESSING_EVENTS.DEBUG_ERROR,
+            "Operation timed out after 1 minute. Please try again."
+          )
+        }
+        return {
+          success: false,
+          error: "Operation timed out after 1 minute. Please try again."
+        }
+      }
 
       // Check if error message indicates API key out of credits
       if (error.message?.includes("API Key out of credits")) {

@@ -3,16 +3,74 @@ import axios from "axios"
 import dotenv from "dotenv"
 import path from "path"
 
+// Add timeout wrapper
+const TIMEOUT_DURATION = 60000 // 1 minute in milliseconds
+
+// Production version - commented out
+/*
+async function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number = TIMEOUT_DURATION
+): Promise<T> {
+  let timeoutId: NodeJS.Timeout
+
+  const timeoutPromise = new Promise<T>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error("Operation timed out after 1 minute. Please try again."))
+    }, timeoutMs)
+  })
+
+  try {
+    const result = await Promise.race([promise, timeoutPromise])
+    clearTimeout(timeoutId!)
+    return result
+  } catch (error) {
+    clearTimeout(timeoutId!)
+    throw error
+  }
+}
+*/
+
+// Test version with artificial delay
+async function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number = TIMEOUT_DURATION
+): Promise<T> {
+  let timeoutId: NodeJS.Timeout
+
+  // Create an artificial delay that's longer than the timeout
+  const delayedPromise = new Promise<T>((resolve, reject) => {
+    setTimeout(async () => {
+      try {
+        const result = await promise
+        resolve(result)
+      } catch (error) {
+        reject(error)
+      }
+    }, 65000) // 65 seconds delay to ensure timeout
+  })
+
+  const timeoutPromise = new Promise<T>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error("Operation timed out after 1 minute. Please try again."))
+    }, timeoutMs)
+  })
+
+  try {
+    const result = await Promise.race([delayedPromise, timeoutPromise])
+    clearTimeout(timeoutId!)
+    return result
+  } catch (error) {
+    clearTimeout(timeoutId!)
+    throw error
+  }
+}
+
 // Load environment variables from .env file
-console.log("Current working directory:", process.cwd())
+
 const envPath = path.resolve(process.cwd(), ".env")
-console.log("Looking for .env file at:", envPath)
+
 dotenv.config({ path: envPath })
-console.log("Environment variables after dotenv.config():", {
-  OPEN_AI_API_KEY: process.env.OPEN_AI_API_KEY ? "exists" : "not found",
-  NODE_ENV: process.env.NODE_ENV,
-  ENV_FILE_PATH: envPath
-})
 
 // Define interfaces for ProblemInfo and related structures
 
@@ -285,16 +343,14 @@ export async function extractProblemInfo(
   }
 
   try {
-    // Send the request to the completion endpoint
-    const response = await axios.post(
-      "https://api.openai.com/v1/chat/completions",
-      payload,
-      {
+    // Wrap the API call with timeout
+    const response = await withTimeout(
+      axios.post("https://api.openai.com/v1/chat/completions", payload, {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${apiKey}`
         }
-      }
+      })
     )
 
     // Extract the function call arguments from the response
@@ -303,7 +359,10 @@ export async function extractProblemInfo(
 
     // Return the parsed function call arguments
     return JSON.parse(functionCallArguments)
-  } catch (error) {
+  } catch (error: any) {
+    if (error.message?.includes("Operation timed out")) {
+      throw error
+    }
     if (error.response?.status === 401) {
       throw new Error(
         "Please close this window and re-enter a valid Open AI API key."
@@ -386,28 +445,34 @@ Format Requirements:
 4. Response must be valid JSON
 5. Return only the JSON object with no markdown or other formatting`
 
-    const response = await axios.post(
-      "https://api.openai.com/v1/chat/completions",
-      {
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "user",
-            content: promptContent
+    // Wrap the API call with timeout
+    const response = await withTimeout(
+      axios.post(
+        "https://api.openai.com/v1/chat/completions",
+        {
+          model: "gpt-4o-mini",
+          messages: [
+            {
+              role: "user",
+              content: promptContent
+            }
+          ]
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`
           }
-        ]
-      },
-      {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`
         }
-      }
+      )
     )
 
     const content = response.data.choices[0].message.content
     return JSON.parse(content)
   } catch (error: any) {
+    if (error.message?.includes("Operation timed out")) {
+      throw error
+    }
     if (error.response?.status === 401) {
       throw new Error(
         "Please close this window and re-enter a valid Open AI API key."
@@ -598,16 +663,14 @@ IMPORTANT FORMATTING NOTES:
   }
 
   try {
-    // Send the request to the OpenAI API
-    const response = await axios.post(
-      "https://api.openai.com/v1/chat/completions",
-      payload,
-      {
+    // Wrap the API call with timeout
+    const response = await withTimeout(
+      axios.post("https://api.openai.com/v1/chat/completions", payload, {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${apiKey}`
         }
-      }
+      })
     )
 
     // Extract the function call arguments from the response
@@ -617,6 +680,9 @@ IMPORTANT FORMATTING NOTES:
     // Parse and return the response
     return JSON.parse(functionCallArguments) as DebugSolutionResponse
   } catch (error: any) {
+    if (error.message?.includes("Operation timed out")) {
+      throw error
+    }
     if (error.response?.status === 404) {
       throw new Error(
         "API endpoint not found. Please check the model name and URL."

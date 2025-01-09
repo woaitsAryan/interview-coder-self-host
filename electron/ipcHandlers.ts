@@ -44,11 +44,10 @@ export function initializeIpcHandlers(appState: AppState): void {
     try {
       let previews = []
       const currentView = appState.getView()
-      console.log("Getting screenshots for view:", currentView)
 
       if (currentView === "queue") {
         const queue = appState.getScreenshotQueue()
-        console.log("Main queue contents:", queue)
+
         previews = await Promise.all(
           queue.map(async (path) => ({
             path,
@@ -57,7 +56,7 @@ export function initializeIpcHandlers(appState: AppState): void {
         )
       } else {
         const extraQueue = appState.getExtraScreenshotQueue()
-        console.log("Extra queue contents:", extraQueue)
+
         previews = await Promise.all(
           extraQueue.map(async (path) => ({
             path,
@@ -65,10 +64,7 @@ export function initializeIpcHandlers(appState: AppState): void {
           }))
         )
       }
-      console.log(
-        "Returning previews:",
-        previews.map((p) => p.path)
-      )
+
       return previews
     } catch (error) {
       console.error("Error getting screenshots:", error)
