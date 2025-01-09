@@ -105,6 +105,7 @@ export class WindowHelper {
     this.mainWindow = new BrowserWindow(windowSettings)
 
     this.mainWindow.setContentProtection(true)
+    // this.mainWindow.webContents.openDevTools()
 
     // Only call macOS specific methods if running on macOS
     if (isMac) {

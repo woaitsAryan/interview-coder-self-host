@@ -18,13 +18,8 @@ export function initializeIpcHandlers(appState: AppState): void {
     return appState.deleteScreenshot(path)
   })
 
-  ipcMain.handle("get-api-key", async () => {
-    return store.get("openaiApiKey")
-  })
-
   ipcMain.handle("clear-store", async () => {
     try {
-      store.set("openaiApiKey", null)
       return { success: true }
     } catch (error) {
       console.error("Error clearing store:", error)
@@ -81,16 +76,6 @@ export function initializeIpcHandlers(appState: AppState): void {
     } catch (error: any) {
       console.error("Error resetting queues:", error)
       return { success: false, error: error.message }
-    }
-  })
-
-  ipcMain.handle("set-api-key", (_event, apiKey: string) => {
-    try {
-      store.set("openaiApiKey", apiKey)
-      return { success: true }
-    } catch (error) {
-      console.error("Error setting API key:", error)
-      return { success: false, error: "Failed to set API key" }
     }
   })
 }

@@ -10,7 +10,6 @@ import {
   generateSolutionResponses
 } from "./handlers/problemHandler"
 import axios from "axios"
-import sharp from "sharp"
 
 export class ProcessingHelper {
   private appState: AppState
@@ -39,66 +38,35 @@ export class ProcessingHelper {
         return
       }
 
-      mainWindow.webContents.send(this.appState.PROCESSING_EVENTS.INITIAL_START)
-      this.appState.setView("solutions")
-
-      // Initialize AbortController
-      this.currentProcessingAbortController = new AbortController()
-      const { signal } = this.currentProcessingAbortController
-
-      // function to compress the Image
-      function compressBase64Image(
-        base64: string,
-        maxWidth: number,
-        quality: number
-      ): Promise<string> {
-        return new Promise((resolve, reject) => {
-          // Convert Base64 to Buffer
-          const buffer = Buffer.from(base64, "base64")
-
-          // Use sharp to resize and compress the image
-          sharp(buffer)
-            .resize({ width: maxWidth }) // Resize image to max width while maintaining aspect ratio
-            .jpeg({ quality: Math.round(quality * 100) }) // Compress image with the specified quality
-            .toBuffer()
-            .then((compressedBuffer) => {
-              // Convert the compressed Buffer back to Base64
-              const compressedBase64 = compressedBuffer.toString("base64")
-              resolve(compressedBase64)
-            })
-            .catch((error) => {
-              reject(error)
-            })
-        })
-      }
-
       try {
+        mainWindow.webContents.send(
+          this.appState.PROCESSING_EVENTS.INITIAL_START
+        )
+
+        // Initialize AbortController
+        this.currentProcessingAbortController = new AbortController()
+        const { signal } = this.currentProcessingAbortController
+
         const screenshots = await Promise.all(
           screenshotQueue.map(async (path) => ({
             path,
             preview: await this.screenshotHelper.getImagePreview(path),
-            data: await compressBase64Image(
-              fs.readFileSync(path).toString("base64"),
-              800,
-              0.7
-            ),
+            data: fs.readFileSync(path).toString("base64")
           }))
         )
 
         const result = await this.processScreenshotsHelper(screenshots, signal)
 
         if (!result.success) {
+          console.error("Processing failed:", result.error)
           if (result.error?.includes("API Key out of credits")) {
             mainWindow.webContents.send(
               this.appState.PROCESSING_EVENTS.API_KEY_OUT_OF_CREDITS
             )
-          } else if (
-            result.error?.includes(
-              "Please close this window and re-enter a valid Open AI API key."
-            )
-          ) {
+          } else if (result.error?.includes("OpenAI API key not found")) {
             mainWindow.webContents.send(
-              this.appState.PROCESSING_EVENTS.API_KEY_INVALID
+              this.appState.PROCESSING_EVENTS.INITIAL_SOLUTION_ERROR,
+              "OpenAI API key not found in environment variables. Please set the OPEN_AI_API_KEY environment variable."
             )
           } else {
             mainWindow.webContents.send(
@@ -106,8 +74,15 @@ export class ProcessingHelper {
               result.error
             )
           }
+          // Reset view back to queue on error
+          this.appState.setView("queue")
+          return
         }
+
+        // Only set view to solutions if processing succeeded
+        this.appState.setView("solutions")
       } catch (error: any) {
+        console.error("Processing error:", error)
         if (axios.isCancel(error)) {
           mainWindow.webContents.send(
             this.appState.PROCESSING_EVENTS.INITIAL_SOLUTION_ERROR,
@@ -116,9 +91,11 @@ export class ProcessingHelper {
         } else {
           mainWindow.webContents.send(
             this.appState.PROCESSING_EVENTS.INITIAL_SOLUTION_ERROR,
-            error.message
+            error.message || "An unknown error occurred"
           )
         }
+        // Reset view back to queue on error
+        this.appState.setView("queue")
       } finally {
         this.currentProcessingAbortController = null
       }

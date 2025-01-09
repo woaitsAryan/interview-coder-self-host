@@ -11,7 +11,6 @@ import { ToastViewport } from "@radix-ui/react-toast"
 import { useEffect, useRef, useState } from "react"
 import Solutions from "./_pages/Solutions"
 import { QueryClient, QueryClientProvider } from "react-query"
-import ApiKeyAuth from "./components/ApiKeyAuth"
 import { createContext, useContext } from "react"
 
 declare global {
@@ -23,12 +22,10 @@ declare global {
         height: number
       }) => Promise<void>
       getScreenshots: () => Promise<Array<{ path: string; preview: string }>>
-      getApiKey: () => Promise<string | null>
       clearStore: () => Promise<{ success: boolean; error?: string }>
 
       //GLOBAL EVENTS
       onUnauthorized: (callback: () => void) => () => void
-      onApiKeyOutOfCredits: (callback: () => void) => () => void
       onScreenshotTaken: (
         callback: (data: { path: string; preview: string }) => void
       ) => () => void
@@ -46,15 +43,8 @@ declare global {
       onProblemExtracted: (callback: (data: any) => void) => () => void
 
       onDebugSuccess: (callback: (data: any) => void) => () => void
-
       onDebugStart: (callback: () => void) => () => void
       onDebugError: (callback: (error: string) => void) => () => void
-
-      // Add the updateApiKey method
-      updateApiKey: (apiKey: string) => Promise<void>
-      setApiKey: (
-        apiKey: string
-      ) => Promise<{ success: boolean; error?: string }>
 
       openExternal: (url: string) => Promise<void>
     }
@@ -88,7 +78,6 @@ export function useToast() {
 
 const App: React.FC = () => {
   const [view, setView] = useState<"queue" | "solutions" | "debug">("queue")
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const [toastOpen, setToastOpen] = useState(false)
   const [toastMessage, setToastMessage] = useState<ToastMessage>({
@@ -96,13 +85,6 @@ const App: React.FC = () => {
     description: "",
     variant: "neutral"
   })
-
-  const handleApiKeySubmit = async (key: string) => {
-    const result = await window.electronAPI.setApiKey(key)
-    if (result.success) {
-      setIsAuthenticated(true)
-    }
-  }
 
   const showToast = (
     title: string,
@@ -114,7 +96,6 @@ const App: React.FC = () => {
   }
 
   // Effect for height monitoring
-
   useEffect(() => {
     const cleanup = window.electronAPI.onResetView(() => {
       queryClient.invalidateQueries(["screenshots"])
@@ -166,6 +147,7 @@ const App: React.FC = () => {
       mutationObserver.disconnect()
     }
   }, [view]) // Re-run when view changes
+
   useEffect(() => {
     const cleanupFunctions = [
       window.electronAPI.onSolutionStart(() => {
@@ -190,24 +172,13 @@ const App: React.FC = () => {
           queryClient.invalidateQueries(["problem_statement"])
           queryClient.setQueryData(["problem_statement"], data)
         }
+      }),
+      window.electronAPI.onSolutionError((error: string) => {
+        showToast("Error", error, "error")
       })
     ]
     return () => cleanupFunctions.forEach((cleanup) => cleanup())
   }, [])
-
-  useEffect(() => {
-    const checkApiKey = async () => {
-      const apiKey = await window.electronAPI.getApiKey()
-      if (apiKey) {
-        setIsAuthenticated(true)
-      }
-    }
-    checkApiKey()
-  }, [])
-
-  if (!isAuthenticated) {
-    return <ApiKeyAuth onApiKeySubmit={handleApiKeySubmit} />
-  }
 
   return (
     <div ref={containerRef} className="min-h-0">

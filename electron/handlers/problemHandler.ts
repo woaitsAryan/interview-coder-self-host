@@ -1,6 +1,18 @@
 // Import necessary modules
 import axios from "axios"
-import { store } from "../store"
+import dotenv from "dotenv"
+import path from "path"
+
+// Load environment variables from .env file
+console.log("Current working directory:", process.cwd())
+const envPath = path.resolve(process.cwd(), ".env")
+console.log("Looking for .env file at:", envPath)
+dotenv.config({ path: envPath })
+console.log("Environment variables after dotenv.config():", {
+  OPEN_AI_API_KEY: process.env.OPEN_AI_API_KEY ? "exists" : "not found",
+  NODE_ENV: process.env.NODE_ENV,
+  ENV_FILE_PATH: envPath
+})
 
 // Define interfaces for ProblemInfo and related structures
 
@@ -38,17 +50,17 @@ interface ProblemInfo {
   test_cases?: any // Adjust the type as needed
 }
 
-export async function getApiKey(): Promise<string | null> {
-  return store.get("openaiApiKey")
-}
-
 // Define the extractProblemInfo function
 export async function extractProblemInfo(
   imageDataList: string[]
 ): Promise<any> {
-  const storedApiKey = store.get("openaiApiKey")
-  if (!storedApiKey) {
-    throw new Error("OpenAI API key not set")
+  const apiKey = process.env.OPEN_AI_API_KEY
+
+  if (!apiKey) {
+    console.error("OpenAI API key not found in environment variables")
+    throw new Error(
+      "OpenAI API key not found in environment variables. Please set the OPEN_AI_API_KEY environment variable."
+    )
   }
 
   // Prepare the image contents for the message
@@ -280,7 +292,7 @@ export async function extractProblemInfo(
       {
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${storedApiKey}`
+          Authorization: `Bearer ${apiKey}`
         }
       }
     )
@@ -311,9 +323,9 @@ export async function generateSolutionResponses(
   problemInfo: ProblemInfo
 ): Promise<any> {
   try {
-    const storedApiKey = store.get("openaiApiKey") as string
-    if (!storedApiKey) {
-      throw new Error("OpenAI API key not set")
+    const apiKey = process.env.OPEN_AI_API_KEY
+    if (!apiKey) {
+      throw new Error("OpenAI API key not found in environment variables")
     }
 
     // Build the complete prompt with all problem information
@@ -388,7 +400,7 @@ Format Requirements:
       {
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${storedApiKey}`
+          Authorization: `Bearer ${apiKey}`
         }
       }
     )
@@ -415,6 +427,11 @@ export async function debugSolutionResponses(
   imageDataList: string[],
   problemInfo: ProblemInfo
 ): Promise<DebugSolutionResponse> {
+  const apiKey = process.env.OPEN_AI_API_KEY
+  if (!apiKey) {
+    throw new Error("OpenAI API key not found in environment variables")
+  }
+
   // Process images for inclusion in prompt
   const imageContents = imageDataList.map((imageData) => ({
     type: "image_url",
@@ -582,18 +599,13 @@ IMPORTANT FORMATTING NOTES:
 
   try {
     // Send the request to the OpenAI API
-    const storedApiKey = store.get("openaiApiKey") as string
-    if (!storedApiKey) {
-      throw new Error("OpenAI API key not set")
-    }
-
     const response = await axios.post(
       "https://api.openai.com/v1/chat/completions",
       payload,
       {
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${storedApiKey}`
+          Authorization: `Bearer ${apiKey}`
         }
       }
     )

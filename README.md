@@ -93,8 +93,8 @@ The application uses unidentifiable global keyboard shortcuts that won't be dete
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/ibttf/interview-coder.git
-cd interview-coder
+git clone https://github.com/ibttf/interview-coder-v1.git
+cd interview-coder-v1
 ```
 
 2. Install dependencies:
@@ -153,13 +153,13 @@ run that ^ and then cd into release and run
 
 
 #intel
-arch -arm64 xcrun notarytool submit "/Users/roylee0912/Development/interview-coder/release/Interview Coder-1.0.0.dmg" \
+arch -arm64 xcrun notarytool submit "/Users/roylee0912/Development/interview-coder-v1/release/Interview Coder-1.0.0.dmg" \
   --keychain-profile "my-apple-creds" \
   --wait
 
 
 #silicon
-arch -arm64 xcrun notarytool submit "/Users/roylee0912/Development/interview-coder/release/Interview Coder-1.0.0-arm64.dmg" \
+arch -arm64 xcrun notarytool submit "/Users/roylee0912/Development/interview-coder-v1/release/Interview Coder-1.0.0-arm64.dmg" \
   --keychain-profile "my-apple-creds" \
   --wait
 
@@ -172,9 +172,9 @@ xcrun stapler staple "Interview Coder-1.0.0-arm64.dmg"
 
 #validating
 
-xcrun stapler validate "/Users/roylee0912/Development/interview-coder/release/Interview Coder-1.0.0.dmg"
+xcrun stapler validate "/Users/roylee0912/Development/interview-coder-v1/release/Interview Coder-1.0.0.dmg"
 
-xcrun stapler validate "/Users/roylee0912/Development/interview-coder/release/Interview Coder-1.0.0-arm64.dmg"
+xcrun stapler validate "/Users/roylee0912/Development/interview-coder-v1/release/Interview Coder-1.0.0-arm64.dmg"
 
 
 ```

@@ -1,5 +1,5 @@
 {
-  "name": "interview-coder",
+  "name": "interview-coder-v1",
   "version": "1.0.0",
   "main": "./dist-electron/main.js",
   "scripts": {
@@ -8,7 +8,7 @@
     "build": "npm run clean && cross-env NODE_ENV=production tsc && vite build && electron-builder --mac",
     "preview": "vite preview",
     "electron:dev": "tsc -p electron/tsconfig.json && electron .",
-    "app:dev": "concurrently \"cross-env NODE_ENV=development vite\" \"wait-on http://localhost:5173 && cross-env electron .\"",
+    "app:dev": "cross-env NODE_ENV=development concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
     "app:build": "npm run build",
     "watch": "tsc -p electron/tsconfig.json --watch",
     "app:dir": "electron-builder --dir",
@@ -21,7 +21,8 @@
       "dist/**/*",
       "dist-electron/**/*",
       "package.json",
-      "electron/**/*"
+      "electron/**/*",
+      ".env"
     ],
     "directories": {
       "output": "release",
@@ -61,7 +62,7 @@
     "publish": {
       "provider": "github",
       "owner": "ibttf",
-      "repo": "interview-coder"
+      "repo": "interview-coder-v1"
     }
   },
   "keywords": [],

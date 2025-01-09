@@ -7,7 +7,6 @@ interface ElectronAPI {
     width: number
     height: number
   }) => Promise<void>
-  getApiKey: () => Promise<string | null>
   clearStore: () => Promise<{ success: boolean; error?: string }>
 
   getScreenshots: () => Promise<{
@@ -36,8 +35,6 @@ interface ElectronAPI {
   takeScreenshot: () => Promise<void>
   moveWindowLeft: () => Promise<void>
   moveWindowRight: () => Promise<void>
-  updateApiKey: (apiKey: string) => Promise<void>
-  setApiKey: (apiKey: string) => Promise<{ success: boolean }>
   openExternal: (url: string) => void
 }
 
@@ -65,7 +62,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
   updateContentDimensions: (dimensions: { width: number; height: number }) =>
     ipcRenderer.invoke("update-content-dimensions", dimensions),
 
-  getApiKey: () => ipcRenderer.invoke("get-api-key"),
   clearStore: () => ipcRenderer.invoke("clear-store"),
   takeScreenshot: () => ipcRenderer.invoke("take-screenshot"),
   getScreenshots: () => ipcRenderer.invoke("get-screenshots"),
@@ -172,21 +168,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
       ipcRenderer.removeListener(PROCESSING_EVENTS.UNAUTHORIZED, subscription)
     }
   },
-  onApiKeyOutOfCredits: (callback: () => void) => {
-    const subscription = () => callback()
-    ipcRenderer.on(PROCESSING_EVENTS.API_KEY_OUT_OF_CREDITS, subscription)
-    return () => {
-      ipcRenderer.removeListener(
-        PROCESSING_EVENTS.API_KEY_OUT_OF_CREDITS,
-        subscription
-      )
-    }
-  },
   moveWindowLeft: () => ipcRenderer.invoke("move-window-left"),
   moveWindowRight: () => ipcRenderer.invoke("move-window-right"),
-  updateApiKey: (apiKey: string) =>
-    ipcRenderer.invoke("update-api-key", apiKey),
-  setApiKey: (apiKey: string) => ipcRenderer.invoke("set-api-key", apiKey),
   openExternal: (url: string) => shell.openExternal(url)
 } as ElectronAPI)
 

@@ -1,13 +1,11 @@
 import Store from "electron-store"
 
 interface StoreSchema {
-  openaiApiKey: string | null
+  // Empty for now, we can add other store items here later
 }
 
 const store = new Store<StoreSchema>({
-  defaults: {
-    openaiApiKey: null
-  },
+  defaults: {},
   encryptionKey: "your-encryption-key"
 }) as Store<StoreSchema> & {
   store: StoreSchema

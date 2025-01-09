@@ -183,13 +183,6 @@ const Solutions: React.FC<SolutionsProps> = ({ setView }) => {
     // Set up event listeners
     const cleanupFunctions = [
       window.electronAPI.onScreenshotTaken(() => refetch()),
-      window.electronAPI.onApiKeyOutOfCredits(() => {
-        showToast(
-          "API Key Out of Credits",
-          "Your OpenAI API key is out of credits. Please refill your credits and try again.",
-          "error"
-        )
-      }),
       window.electronAPI.onResetView(() => {
         // Set resetting state first
         setIsResetting(true)
@@ -215,11 +208,7 @@ const Solutions: React.FC<SolutionsProps> = ({ setView }) => {
       }),
       //if there was an error processing the initial solution
       window.electronAPI.onSolutionError((error: string) => {
-        showToast(
-          "Processing Failed",
-          "There was an error processing your extra screenshots.",
-          "error"
-        )
+        showToast("Processing Failed", error, "error")
         // Reset solutions in the cache (even though this shouldn't ever happen) and complexities to previous states
         const solution = queryClient.getQueryData(["solution"]) as {
           code: string
@@ -228,7 +217,7 @@ const Solutions: React.FC<SolutionsProps> = ({ setView }) => {
           space_complexity: string
         } | null
         if (!solution) {
-          setView("queue") //make sure that this is correct. or like make sure there's a toast or something
+          setView("queue")
         }
         setSolutionData(solution?.code || null)
         setThoughtsData(solution?.thoughts || null)

@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from "electron"
+import { app, BrowserWindow, screen } from "electron"
 import { initializeIpcHandlers } from "./ipcHandlers"
 import { WindowHelper } from "./WindowHelper"
 import { ScreenshotHelper } from "./ScreenshotHelper"
@@ -6,6 +6,35 @@ import { ShortcutsHelper } from "./shortcuts"
 import { ProcessingHelper } from "./ProcessingHelper"
 import { autoUpdater } from "electron-updater"
 import { initAutoUpdater } from "./autoUpdater"
+import path from "path"
+import dotenv from "dotenv"
+import fs from "fs"
+
+// Try to load environment variables from multiple possible locations
+const possibleEnvPaths = [
+  path.resolve(process.cwd(), ".env"),
+  path.resolve(app.getAppPath(), ".env"),
+  path.resolve(__dirname, "..", ".env"),
+  path.resolve(process.cwd(), "..", ".env")
+]
+
+console.log("Main process - Checking for .env file in multiple locations...")
+for (const envPath of possibleEnvPaths) {
+  console.log(`Checking ${envPath}...`)
+  if (fs.existsSync(envPath)) {
+    console.log(`Found .env file at: ${envPath}`)
+    dotenv.config({ path: envPath })
+    break
+  }
+}
+
+console.log("Main process - Environment variables status:", {
+  OPEN_AI_API_KEY: process.env.OPEN_AI_API_KEY ? "exists" : "not found",
+  NODE_ENV: process.env.NODE_ENV,
+  CWD: process.cwd(),
+  APP_PATH: app.getAppPath(),
+  DIRNAME: __dirname
+})
 
 export class AppState {
   private static instance: AppState | null = null
