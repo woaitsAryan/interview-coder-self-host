@@ -349,7 +349,9 @@ const Solutions: React.FC<SolutionsProps> = ({ setView }) => {
       )
 
       if (response.success) {
-        refetch() // Refetch screenshots instead of managing state directly
+        // Fetch and update screenshots after successful deletion
+        const existing = await window.electronAPI.getScreenshots()
+        setExtraScreenshots(existing)
       } else {
         console.error("Failed to delete extra screenshot:", response.error)
         showToast("Error", "Failed to delete the screenshot", "error")
