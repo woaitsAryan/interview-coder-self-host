@@ -1,15 +1,13 @@
 // ProcessingHelper.ts
-
 import fs from "node:fs"
 import { ScreenshotHelper } from "./ScreenshotHelper"
 import { AppState } from "./main"
-
-import {
-  debugSolutionResponses,
-  extractProblemInfo,
-  generateSolutionResponses
-} from "./handlers/problemHandler"
 import axios from "axios"
+
+const API_BASE_URL =
+  process.env.NODE_ENV === "development"
+    ? "http://localhost:3000"
+    : "https://www.interviewcoder.co"
 
 export class ProcessingHelper {
   private appState: AppState
@@ -23,6 +21,7 @@ export class ProcessingHelper {
     this.appState = appState
     this.screenshotHelper = appState.getScreenshotHelper()
   }
+
   public async processScreenshots(): Promise<void> {
     const mainWindow = this.appState.getMainWindow()
     if (!mainWindow) return
@@ -129,7 +128,7 @@ export class ProcessingHelper {
           ].map(async (path) => ({
             path,
             preview: await this.screenshotHelper.getImagePreview(path),
-            data: fs.readFileSync(path).toString("base64") // Read image data
+            data: fs.readFileSync(path).toString("base64")
           }))
         )
         console.log(
@@ -181,9 +180,15 @@ export class ProcessingHelper {
       const mainWindow = this.appState.getMainWindow()
       let problemInfo
 
-      // First function call - extract problem info
+      // First API call - extract problem info
       try {
-        problemInfo = await extractProblemInfo(imageDataList)
+        const extractResponse = await axios.post(
+          `${API_BASE_URL}/api/extract`,
+          { imageDataList },
+          { signal }
+        )
+
+        problemInfo = extractResponse.data
 
         // Store problem info in AppState
         this.appState.setProblemInfo(problemInfo)
@@ -196,7 +201,7 @@ export class ProcessingHelper {
           )
         }
       } catch (error: any) {
-        if (error.message?.includes("Operation timed out")) {
+        if (error.response?.data?.error?.includes("Operation timed out")) {
           // Cancel ongoing API requests
           this.cancelOngoingRequests()
           // Clear both screenshot queues
@@ -215,13 +220,13 @@ export class ProcessingHelper {
             "Operation timed out after 1 minute. Please try again."
           )
         }
-        if (error.message?.includes("API Key out of credits")) {
-          throw new Error(error.message)
+        if (error.response?.data?.error?.includes("API Key out of credits")) {
+          throw new Error(error.response.data.error)
         }
-        throw error // Re-throw if not an API key error
+        throw error
       }
 
-      // Second function call - generate solutions
+      // Second API call - generate solutions
       if (mainWindow) {
         const solutionsResult = await this.generateSolutionsHelper(signal)
         if (solutionsResult.success) {
@@ -245,6 +250,7 @@ export class ProcessingHelper {
       return { success: false, error: error.message }
     }
   }
+
   private async generateSolutionsHelper(signal: AbortSignal) {
     try {
       const problemInfo = this.appState.getProblemInfo()
@@ -252,18 +258,17 @@ export class ProcessingHelper {
         throw new Error("No problem info available")
       }
 
-      // Use the generateSolutionResponses function
-      const solutions = await generateSolutionResponses(problemInfo)
+      const response = await axios.post(
+        `${API_BASE_URL}/api/generate`,
+        problemInfo,
+        { signal }
+      )
 
-      if (!solutions) {
-        throw new Error("No solutions received")
-      }
-
-      return { success: true, data: solutions }
+      return { success: true, data: response.data }
     } catch (error: any) {
       const mainWindow = this.appState.getMainWindow()
 
-      if (error.message?.includes("Operation timed out")) {
+      if (error.response?.data?.error?.includes("Operation timed out")) {
         // Cancel ongoing API requests
         this.cancelOngoingRequests()
         // Clear both screenshot queues
@@ -284,18 +289,17 @@ export class ProcessingHelper {
         }
       }
 
-      // Check if error message indicates API key out of credits
-      if (error.message?.includes("API Key out of credits")) {
+      if (error.response?.data?.error?.includes("API Key out of credits")) {
         if (mainWindow) {
           mainWindow.webContents.send(
             this.appState.PROCESSING_EVENTS.API_KEY_OUT_OF_CREDITS
           )
         }
-        return { success: false, error: error.message }
+        return { success: false, error: error.response.data.error }
       }
 
       if (
-        error.message?.includes(
+        error.response?.data?.error?.includes(
           "Please close this window and re-enter a valid Open AI API key."
         )
       ) {
@@ -304,7 +308,7 @@ export class ProcessingHelper {
             this.appState.PROCESSING_EVENTS.API_KEY_INVALID
           )
         }
-        return { success: false, error: error.message }
+        return { success: false, error: error.response.data.error }
       }
 
       return { success: false, error: error.message }
@@ -323,21 +327,17 @@ export class ProcessingHelper {
         throw new Error("No problem info available")
       }
 
-      // Use the debugSolutionResponses function
-      const debugSolutions = await debugSolutionResponses(
-        imageDataList,
-        problemInfo
+      const response = await axios.post(
+        `${API_BASE_URL}/api/debug`,
+        { imageDataList, problemInfo },
+        { signal }
       )
 
-      if (!debugSolutions) {
-        throw new Error("No debug solutions received")
-      }
-
-      return { success: true, data: debugSolutions }
+      return { success: true, data: response.data }
     } catch (error: any) {
       const mainWindow = this.appState.getMainWindow()
 
-      if (error.message?.includes("Operation timed out")) {
+      if (error.response?.data?.error?.includes("Operation timed out")) {
         // Cancel ongoing API requests
         this.cancelOngoingRequests()
         // Clear both screenshot queues
@@ -358,18 +358,17 @@ export class ProcessingHelper {
         }
       }
 
-      // Check if error message indicates API key out of credits
-      if (error.message?.includes("API Key out of credits")) {
+      if (error.response?.data?.error?.includes("API Key out of credits")) {
         if (mainWindow) {
           mainWindow.webContents.send(
             this.appState.PROCESSING_EVENTS.API_KEY_OUT_OF_CREDITS
           )
         }
-        return { success: false, error: error.message }
+        return { success: false, error: error.response.data.error }
       }
 
       if (
-        error.message?.includes(
+        error.response?.data?.error?.includes(
           "Please close this window and re-enter a valid Open AI API key."
         )
       ) {
@@ -378,8 +377,9 @@ export class ProcessingHelper {
             this.appState.PROCESSING_EVENTS.API_KEY_INVALID
           )
         }
-        return { success: false, error: error.message }
+        return { success: false, error: error.response.data.error }
       }
+
       return { success: false, error: error.message }
     }
   }
@@ -390,14 +390,12 @@ export class ProcessingHelper {
     if (this.currentProcessingAbortController) {
       this.currentProcessingAbortController.abort()
       this.currentProcessingAbortController = null
-
       wasCancelled = true
     }
 
     if (this.currentExtraProcessingAbortController) {
       this.currentExtraProcessingAbortController.abort()
       this.currentExtraProcessingAbortController = null
-
       wasCancelled = true
     }
 

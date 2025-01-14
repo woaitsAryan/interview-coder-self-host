@@ -13,7 +13,6 @@ interface ElectronAPI {
     height: number
   }) => Promise<void>
   clearStore: () => Promise<{ success: boolean; error?: string }>
-
   getScreenshots: () => Promise<{
     success: boolean
     previews?: Array<{ path: string; preview: string }> | null
@@ -25,7 +24,6 @@ interface ElectronAPI {
   onScreenshotTaken: (
     callback: (data: { path: string; preview: string }) => void
   ) => () => void
-  onSolutionsReady: (callback: (solutions: string) => void) => () => void
   onResetView: (callback: () => void) => () => void
   onSolutionStart: (callback: () => void) => () => void
   onDebugStart: (callback: () => void) => () => void
@@ -34,12 +32,8 @@ interface ElectronAPI {
   onProcessingNoScreenshots: (callback: () => void) => () => void
   onProblemExtracted: (callback: (data: any) => void) => () => void
   onSolutionSuccess: (callback: (data: any) => void) => () => void
-
   onUnauthorized: (callback: () => void) => () => void
   onDebugError: (callback: (error: string) => void) => () => void
-  takeScreenshot: () => Promise<void>
-  moveWindowLeft: () => Promise<void>
-  moveWindowRight: () => Promise<void>
   openExternal: (url: string) => void
   toggleMainWindow: () => Promise<{ success: boolean; error?: string }>
   triggerScreenshot: () => Promise<{ success: boolean; error?: string }>
@@ -57,14 +51,13 @@ export const PROCESSING_EVENTS = {
   //global states
   UNAUTHORIZED: "procesing-unauthorized",
   NO_SCREENSHOTS: "processing-no-screenshots",
-  API_KEY_OUT_OF_CREDITS: "processing-api-key-out-of-credits",
-  API_KEY_INVALID: "processing-api-key-invalid",
 
   //states for generating the initial solution
   INITIAL_START: "initial-start",
   PROBLEM_EXTRACTED: "problem-extracted",
   SOLUTION_SUCCESS: "solution-success",
   INITIAL_SOLUTION_ERROR: "solution-error",
+  RESET: "reset",
 
   //states for processing the debugging
   DEBUG_START: "debug-start",
@@ -82,7 +75,6 @@ const electronAPI = {
   updateContentDimensions: (dimensions: { width: number; height: number }) =>
     ipcRenderer.invoke("update-content-dimensions", dimensions),
   clearStore: () => ipcRenderer.invoke("clear-store"),
-  takeScreenshot: () => ipcRenderer.invoke("take-screenshot"),
   getScreenshots: () => ipcRenderer.invoke("get-screenshots"),
   deleteScreenshot: (path: string) =>
     ipcRenderer.invoke("delete-screenshot", path),
@@ -108,13 +100,6 @@ const electronAPI = {
       ipcRenderer.removeListener("screenshot-taken", subscription)
     }
   },
-  onSolutionsReady: (callback: (solutions: string) => void) => {
-    const subscription = (_: any, solutions: string) => callback(solutions)
-    ipcRenderer.on("solutions-ready", subscription)
-    return () => {
-      ipcRenderer.removeListener("solutions-ready", subscription)
-    }
-  },
   onResetView: (callback: () => void) => {
     const subscription = () => callback()
     ipcRenderer.on("reset-view", subscription)
@@ -136,7 +121,6 @@ const electronAPI = {
       ipcRenderer.removeListener(PROCESSING_EVENTS.DEBUG_START, subscription)
     }
   },
-
   onDebugSuccess: (callback: (data: any) => void) => {
     ipcRenderer.on("debug-success", (_event, data) => callback(data))
     return () => {
@@ -169,7 +153,6 @@ const electronAPI = {
       ipcRenderer.removeListener(PROCESSING_EVENTS.NO_SCREENSHOTS, subscription)
     }
   },
-
   onProblemExtracted: (callback: (data: any) => void) => {
     const subscription = (_: any, data: any) => callback(data)
     ipcRenderer.on(PROCESSING_EVENTS.PROBLEM_EXTRACTED, subscription)
@@ -197,8 +180,6 @@ const electronAPI = {
       ipcRenderer.removeListener(PROCESSING_EVENTS.UNAUTHORIZED, subscription)
     }
   },
-  moveWindowLeft: () => ipcRenderer.invoke("move-window-left"),
-  moveWindowRight: () => ipcRenderer.invoke("move-window-right"),
   openExternal: (url: string) => shell.openExternal(url),
   triggerScreenshot: () => ipcRenderer.invoke("trigger-screenshot"),
   triggerProcessScreenshots: () =>
@@ -220,6 +201,13 @@ const electronAPI = {
     ipcRenderer.on("subscription-portal-closed", subscription)
     return () => {
       ipcRenderer.removeListener("subscription-portal-closed", subscription)
+    }
+  },
+  onReset: (callback: () => void) => {
+    const subscription = () => callback()
+    ipcRenderer.on(PROCESSING_EVENTS.RESET, subscription)
+    return () => {
+      ipcRenderer.removeListener(PROCESSING_EVENTS.RESET, subscription)
     }
   }
 } as ElectronAPI

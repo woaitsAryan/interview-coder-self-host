@@ -137,6 +137,9 @@ const SubscribedApp: React.FC = () => {
         })
         setView("queue")
       }),
+      window.electronAPI.onReset(() => {
+        queryClient.setQueryData(["problem_statement"], null)
+      }),
       window.electronAPI.onProblemExtracted((data: any) => {
         if (view === "queue") {
           queryClient.invalidateQueries({

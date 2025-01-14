@@ -223,6 +223,9 @@ const Solutions: React.FC<SolutionsProps> = ({ setView }) => {
         setTimeComplexityData(null)
         setSpaceComplexityData(null)
       }),
+      window.electronAPI.onProblemExtracted((data) => {
+        queryClient.setQueryData(["problem_statement"], data)
+      }),
       //if there was an error processing the initial solution
       window.electronAPI.onSolutionError((error: string) => {
         showToast("Processing Failed", error, "error")

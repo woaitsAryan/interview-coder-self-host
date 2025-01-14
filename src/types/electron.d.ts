@@ -29,6 +29,7 @@ interface Window {
     onDebugError: (callback: (error: string) => void) => () => void
     onSubscriptionUpdated: (callback: () => void) => () => void
     onSubscriptionPortalClosed: (callback: () => void) => () => void
+    onReset: (callback: () => void) => () => void
     takeScreenshot: () => Promise<void>
     moveWindowLeft: () => Promise<void>
     moveWindowRight: () => Promise<void>
