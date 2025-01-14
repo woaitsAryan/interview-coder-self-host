@@ -70,6 +70,7 @@ export default defineConfig(({ command, mode }) => {
     },
     clearScreen: true,
     server: {
+      port: 54321,
       force: true,
       watch: {
         usePolling: true,

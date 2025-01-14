@@ -1,36 +1,40 @@
 import React, { useState, useEffect, useRef } from "react"
-import { useQuery } from "react-query"
+import { useQuery } from "@tanstack/react-query"
 import ScreenshotQueue from "../components/Queue/ScreenshotQueue"
 import QueueCommands from "../components/Queue/QueueCommands"
-import { useToast } from "../App"
 
-interface QueueProps {
-  setView: React.Dispatch<React.SetStateAction<"queue" | "solutions" | "debug">>
+import { useToast } from "./SubscribedApp"
+import { Screenshot } from "../types/screenshots"
+
+async function fetchScreenshots(): Promise<Screenshot[]> {
+  try {
+    const existing = await window.electronAPI.getScreenshots()
+    return existing
+  } catch (error) {
+    console.error("Error loading screenshots:", error)
+    throw error
+  }
 }
 
-const Queue: React.FC<QueueProps> = ({ setView }) => {
+const Queue: React.FC<{
+  setView: (view: "queue" | "solutions" | "debug") => void
+}> = ({ setView }) => {
   const { showToast } = useToast()
 
   const [isTooltipVisible, setIsTooltipVisible] = useState(false)
   const [tooltipHeight, setTooltipHeight] = useState(0)
   const contentRef = useRef<HTMLDivElement>(null)
 
-  const { data: screenshots = [], refetch } = useQuery({
+  const {
+    data: screenshots = [],
+    isLoading,
+    refetch
+  } = useQuery<Screenshot[]>({
     queryKey: ["screenshots"],
-    queryFn: async () => {
-      try {
-        const existing = await window.electronAPI.getScreenshots()
-        return existing
-      } catch (error) {
-        console.error("Error loading screenshots:", error)
-        showToast("Error", "Failed to load existing screenshots", "error")
-        return []
-      }
-    },
+    queryFn: fetchScreenshots,
     staleTime: Infinity,
-    cacheTime: Infinity,
-    refetchOnWindowFocus: true,
-    refetchOnMount: true
+    gcTime: Infinity,
+    refetchOnWindowFocus: false
   })
 
   const handleDeleteScreenshot = async (index: number) => {
@@ -49,19 +53,6 @@ const Queue: React.FC<QueueProps> = ({ setView }) => {
       }
     } catch (error) {
       console.error("Error deleting screenshot:", error)
-    }
-  }
-
-  const handleResetApiKey = async () => {
-    try {
-      const result = await window.electronAPI.clearStore()
-      if (result.success) {
-        window.location.reload()
-      } else {
-        showToast("Error", "Failed to reset API key", "error")
-      }
-    } catch (error) {
-      showToast("Error", "Failed to reset API key", "error")
     }
   }
 

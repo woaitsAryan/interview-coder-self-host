@@ -1,8 +1,8 @@
 // ipcHandlers.ts
 
-import { ipcMain } from "electron"
-import { AppState } from "./main"
-import { store } from "./store"
+import { ipcMain, shell } from "electron"
+import { AppState, supabase } from "./main"
+import { randomBytes } from "crypto"
 
 export function initializeIpcHandlers(appState: AppState): void {
   console.log("Initializing IPC handlers")
@@ -81,6 +81,44 @@ export function initializeIpcHandlers(appState: AppState): void {
     } catch (error) {
       console.error("Error in toggle-window handler:", error)
       return { success: false, error: String(error) }
+    }
+  })
+
+  ipcMain.handle("open-subscription-portal", async (_event, authData) => {
+    try {
+      // Generate a secure random token
+      const token = randomBytes(32).toString("hex")
+
+      // Store the token in Supabase with a 5-minute expiration
+      const { error } = await supabase.from("auth_tokens").insert({
+        user_id: authData.id,
+        token: token,
+        expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString()
+      })
+
+      if (error) {
+        console.error("Database error:", error)
+        throw new Error("Failed to create auth token")
+      }
+
+      // Open the checkout page with the token
+      const isDev = process.env.NODE_ENV === "development"
+
+      const url = isDev
+        ? `https://www.interviewcoder.co/checkout?token=${token}`
+        : `https://www.interviewcoder.co/checkout?token=${token}`
+
+      await shell.openExternal(url)
+      return { success: true }
+    } catch (error) {
+      console.error("Error opening checkout page:", error)
+      return {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to open checkout page"
+      }
     }
   })
 

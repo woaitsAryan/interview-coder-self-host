@@ -1,16 +1,34 @@
 import React, { useState, useEffect, useRef } from "react"
-import { useToast } from "../../App"
+import { useToast } from "../../_pages/SubscribedApp"
+import { Screenshot } from "../../types/screenshots"
+import { supabase } from "../../lib/supabase"
 
-interface SolutionCommandsProps {
-  extraScreenshots: any[]
-  onTooltipVisibilityChange?: (visible: boolean, height: number) => void
-  isProcessing?: boolean
+export interface SolutionCommandsProps {
+  onTooltipVisibilityChange: (visible: boolean, height: number) => void
+  isProcessing: boolean
+  screenshots?: Screenshot[]
+  extraScreenshots?: Screenshot[]
+}
+
+const handleSignOut = async () => {
+  try {
+    // Clear any local storage or electron-specific data first
+    localStorage.clear()
+    sessionStorage.clear()
+
+    // Then sign out from Supabase
+    const { error } = await supabase.auth.signOut()
+    if (error) throw error
+  } catch (err) {
+    console.error("Error signing out:", err)
+  }
 }
 
 const SolutionCommands: React.FC<SolutionCommandsProps> = ({
-  extraScreenshots,
   onTooltipVisibilityChange,
-  isProcessing = false
+  isProcessing,
+
+  extraScreenshots = []
 }) => {
   const [isTooltipVisible, setIsTooltipVisible] = useState(false)
   const tooltipRef = useRef<HTMLDivElement>(null)
@@ -397,10 +415,10 @@ const SolutionCommands: React.FC<SolutionCommandsProps> = ({
                       </div>
                     </div>
 
-                    {/* Separator and Reset API Key */}
+                    {/* Separator and Log Out */}
                     <div className="pt-3 mt-3 border-t border-white/10">
                       <button
-                        onClick={handleResetApiKey}
+                        onClick={handleSignOut}
                         className="flex items-center gap-2 text-[11px] text-red-400 hover:text-red-300 transition-colors w-full"
                       >
                         <div className="w-4 h-4 flex items-center justify-center">
@@ -414,13 +432,12 @@ const SolutionCommands: React.FC<SolutionCommandsProps> = ({
                             strokeLinejoin="round"
                             className="w-3 h-3"
                           >
-                            <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-                            <path d="M3 3v5h5" />
-                            <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
-                            <path d="M16 21h5v-5" />
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                            <polyline points="16 17 21 12 16 7" />
+                            <line x1="21" y1="12" x2="9" y2="12" />
                           </svg>
                         </div>
-                        Reset API Key
+                        Log Out
                       </button>
                     </div>
                   </div>

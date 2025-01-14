@@ -7,9 +7,14 @@ import path from "node:path"
 const isDev = process.env.NODE_ENV === "development"
 const isMac = process.platform === "darwin"
 
+// In development, always use the Vite dev server
+// In production, use the built files
 const startUrl = isDev
-  ? "http://localhost:5173"
+  ? process.env.VITE_DEV_SERVER_URL || "http://localhost:54321"
   : `file://${path.join(__dirname, "../dist/index.html")}`
+
+console.log("Environment:", process.env.NODE_ENV)
+console.log("Start URL:", startUrl)
 
 export class WindowHelper {
   private mainWindow: BrowserWindow | null = null
@@ -106,7 +111,7 @@ export class WindowHelper {
     this.mainWindow = new BrowserWindow(windowSettings)
 
     this.mainWindow.setContentProtection(true)
-    // this.mainWindow.webContents.openDevTools()
+    this.mainWindow.webContents.openDevTools()
 
     // Only call macOS specific methods if running on macOS
     if (isMac) {

@@ -17,9 +17,9 @@ export class ScreenshotHelper {
   private readonly screenshotDir: string
   private readonly extraScreenshotDir: string
 
-  private view: "queue" | "solutions" = "queue"
+  private view: "queue" | "solutions" | "debug" = "queue"
 
-  constructor(view: "queue" | "solutions" = "queue") {
+  constructor(view: "queue" | "solutions" | "debug" = "queue") {
     this.view = view
 
     // Initialize directories
@@ -38,11 +38,11 @@ export class ScreenshotHelper {
     }
   }
 
-  public getView(): "queue" | "solutions" {
+  public getView(): "queue" | "solutions" | "debug" {
     return this.view
   }
 
-  public setView(view: "queue" | "solutions"): void {
+  public setView(view: "queue" | "solutions" | "debug"): void {
     console.log("Setting view in ScreenshotHelper:", view)
     console.log(
       "Current queues - Main:",

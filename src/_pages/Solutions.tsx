@@ -1,6 +1,6 @@
 // Solutions.tsx
 import React, { useState, useEffect, useRef } from "react"
-import { useQuery, useQueryClient } from "react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
 import { dracula } from "react-syntax-highlighter/dist/esm/styles/prism"
 
@@ -9,7 +9,7 @@ import ScreenshotQueue from "../components/Queue/ScreenshotQueue"
 import { ProblemStatementData } from "../types/solutions"
 import SolutionCommands from "../components/Solutions/SolutionCommands"
 import Debug from "./Debug"
-import { useToast } from "../App"
+import { useToast } from "./SubscribedApp"
 
 export const ContentSection = ({
   title,
@@ -200,9 +200,13 @@ const Solutions: React.FC<SolutionsProps> = ({ setView }) => {
         // Set resetting state first
         setIsResetting(true)
 
-        // Clear the queries
-        queryClient.removeQueries(["solution"])
-        queryClient.removeQueries(["new_solution"])
+        // Remove queries
+        queryClient.removeQueries({
+          queryKey: ["solution"]
+        })
+        queryClient.removeQueries({
+          queryKey: ["new_solution"]
+        })
 
         // Reset screenshots
         setExtraScreenshots([])
@@ -365,12 +369,10 @@ const Solutions: React.FC<SolutionsProps> = ({ setView }) => {
   return (
     <>
       {!isResetting && queryClient.getQueryData(["new_solution"]) ? (
-        <>
-          <Debug
-            isProcessing={debugProcessing}
-            setIsProcessing={setDebugProcessing}
-          />
-        </>
+        <Debug
+          isProcessing={debugProcessing}
+          setIsProcessing={setDebugProcessing}
+        />
       ) : (
         <div ref={contentRef} className="relative space-y-3 px-4 py-3">
           {/* Conditionally render the screenshot queue if solutionData is available */}

@@ -1,40 +1,33 @@
-import { app, BrowserWindow, screen } from "electron"
+import { createClient } from "@supabase/supabase-js"
+import { app, BrowserWindow } from "electron"
 import { initializeIpcHandlers } from "./ipcHandlers"
-import { WindowHelper } from "./WindowHelper"
+import { ProcessingHelper } from "./ProcessingHelper"
 import { ScreenshotHelper } from "./ScreenshotHelper"
 import { ShortcutsHelper } from "./shortcuts"
-import { ProcessingHelper } from "./ProcessingHelper"
-import { autoUpdater } from "electron-updater"
-import { initAutoUpdater } from "./autoUpdater"
 import path from "path"
-import dotenv from "dotenv"
-import fs from "fs"
+import { WindowHelper } from "./WindowHelper"
+import { initAutoUpdater } from "./autoUpdater"
+import * as dotenv from "dotenv"
 
-// Try to load environment variables from multiple possible locations
-const possibleEnvPaths = [
-  path.resolve(process.cwd(), ".env"),
-  path.resolve(app.getAppPath(), ".env"),
-  path.resolve(__dirname, "..", ".env"),
-  path.resolve(process.cwd(), "..", ".env")
-]
-
-console.log("Main process - Checking for .env file in multiple locations...")
-for (const envPath of possibleEnvPaths) {
-  console.log(`Checking ${envPath}...`)
-  if (fs.existsSync(envPath)) {
-    console.log(`Found .env file at: ${envPath}`)
-    dotenv.config({ path: envPath })
-    break
-  }
-}
-
-console.log("Main process - Environment variables status:", {
-  OPEN_AI_API_KEY: process.env.OPEN_AI_API_KEY ? "exists" : "not found",
-  NODE_ENV: process.env.NODE_ENV,
-  CWD: process.cwd(),
-  APP_PATH: app.getAppPath(),
-  DIRNAME: __dirname
+// Load environment variables from .env file
+const isDev = process.env.NODE_ENV === "development"
+dotenv.config({
+  path: isDev
+    ? path.join(process.cwd(), ".env")
+    : path.join(process.resourcesPath, ".env")
 })
+
+// Initialize Supabase client
+export const supabase = createClient(
+  process.env.VITE_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
+)
 
 export class AppState {
   private static instance: AppState | null = null
@@ -45,7 +38,7 @@ export class AppState {
   public processingHelper: ProcessingHelper
 
   // View management
-  private view: "queue" | "solutions" = "queue"
+  private view: "queue" | "solutions" | "debug" = "queue"
 
   private problemInfo: {
     problem_statement: string
@@ -103,11 +96,11 @@ export class AppState {
     return this.windowHelper.getMainWindow()
   }
 
-  public getView(): "queue" | "solutions" {
+  public getView(): "queue" | "solutions" | "debug" {
     return this.view
   }
 
-  public setView(view: "queue" | "solutions"): void {
+  public setView(view: "queue" | "solutions" | "debug"): void {
     // Set view state before updating screenshot helper
     this.view = view
     // Update screenshot helper's view state

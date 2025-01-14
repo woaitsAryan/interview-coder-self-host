@@ -1,3 +1,44 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.frosted-glass {
+  background: rgba(26, 26, 26, 0.8);
+  backdrop-filter: blur(8px);
+}
+
+.auth-button {
+  background: rgba(252, 252, 252, 0.98);
+  color: rgba(60, 60, 60, 0.9);
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  z-index: 2;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05);
+}
+
+.auth-button:hover {
+  background: rgba(255, 255, 255, 1);
+}
+
+.auth-button::before {
+  content: "";
+  position: absolute;
+  inset: -8px;
+  background: linear-gradient(45deg, #ff000000, #0000ff00);
+  z-index: -1;
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: inherit;
+  filter: blur(24px);
+  opacity: 0;
+}
+
+.auth-button:hover::before {
+  background: linear-gradient(
+    45deg,
+    rgba(255, 0, 0, 0.4),
+    rgba(0, 0, 255, 0.4)
+  );
+  filter: blur(48px);
+  inset: -16px;
+  opacity: 1;
+}

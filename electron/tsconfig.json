@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "ESNext",
+    "target": "ES2020",
     "module": "CommonJS",
     "allowJs": true,
     "skipLibCheck": true,
@@ -11,7 +11,8 @@
     "baseUrl": ".",
     "outDir": "../dist-electron",
     "moduleResolution": "node",
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true
   },
   "include": ["*.ts"]
 }

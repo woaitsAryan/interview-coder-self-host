@@ -4,6 +4,10 @@ const { shell } = require("electron")
 
 // Types for the exposed Electron API
 interface ElectronAPI {
+  openSubscriptionPortal: (authData: {
+    id: string
+    email: string
+  }) => Promise<{ success: boolean; error?: string }>
   updateContentDimensions: (dimensions: {
     width: number
     height: number
@@ -45,6 +49,8 @@ interface ElectronAPI {
   triggerMoveRight: () => Promise<{ success: boolean; error?: string }>
   triggerMoveUp: () => Promise<{ success: boolean; error?: string }>
   triggerMoveDown: () => Promise<{ success: boolean; error?: string }>
+  onSubscriptionUpdated: (callback: () => void) => () => void
+  onSubscriptionPortalClosed: (callback: () => void) => () => void
 }
 
 export const PROCESSING_EVENTS = {
@@ -70,6 +76,9 @@ export const PROCESSING_EVENTS = {
 console.log("Preload script is running")
 
 const electronAPI = {
+  openSubscriptionPortal: async (authData: { id: string; email: string }) => {
+    return ipcRenderer.invoke("open-subscription-portal", authData)
+  },
   updateContentDimensions: (dimensions: { width: number; height: number }) =>
     ipcRenderer.invoke("update-content-dimensions", dimensions),
   clearStore: () => ipcRenderer.invoke("clear-store"),
@@ -198,7 +207,21 @@ const electronAPI = {
   triggerMoveLeft: () => ipcRenderer.invoke("trigger-move-left"),
   triggerMoveRight: () => ipcRenderer.invoke("trigger-move-right"),
   triggerMoveUp: () => ipcRenderer.invoke("trigger-move-up"),
-  triggerMoveDown: () => ipcRenderer.invoke("trigger-move-down")
+  triggerMoveDown: () => ipcRenderer.invoke("trigger-move-down"),
+  onSubscriptionUpdated: (callback: () => void) => {
+    const subscription = () => callback()
+    ipcRenderer.on("subscription-updated", subscription)
+    return () => {
+      ipcRenderer.removeListener("subscription-updated", subscription)
+    }
+  },
+  onSubscriptionPortalClosed: (callback: () => void) => {
+    const subscription = () => callback()
+    ipcRenderer.on("subscription-portal-closed", subscription)
+    return () => {
+      ipcRenderer.removeListener("subscription-portal-closed", subscription)
+    }
+  }
 } as ElectronAPI
 
 // Before exposing the API

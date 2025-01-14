@@ -1,6 +1,6 @@
 // Debug.tsx
 import React, { useState, useEffect, useRef } from "react"
-import { useQuery, useQueryClient } from "react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
 import { dracula } from "react-syntax-highlighter/dist/esm/styles/prism"
 import { ComplexitySection, ContentSection } from "./Solutions"
@@ -14,6 +14,7 @@ import {
 } from "../components/ui/toast"
 import SolutionCommands from "../components/Solutions/SolutionCommands"
 import { diffLines } from "diff"
+import { Screenshot } from "../types/screenshots"
 
 type DiffLine = {
   value: string
@@ -189,14 +190,32 @@ const CodeComparisonSection = ({
   )
 }
 
+async function fetchScreenshots(): Promise<Screenshot[]> {
+  try {
+    const existing = await window.electronAPI.getScreenshots()
+    return existing
+  } catch (error) {
+    console.error("Error loading screenshots:", error)
+    throw error
+  }
+}
+
 interface DebugProps {
   isProcessing: boolean
   setIsProcessing: (isProcessing: boolean) => void
 }
 
 const Debug: React.FC<DebugProps> = ({ isProcessing, setIsProcessing }) => {
-  const queryClient = useQueryClient()
-  const contentRef = useRef<HTMLDivElement>(null)
+  const [tooltipVisible, setTooltipVisible] = useState(false)
+  const [tooltipHeight, setTooltipHeight] = useState(0)
+
+  const { data: screenshots = [], refetch } = useQuery<Screenshot[]>({
+    queryKey: ["screenshots"],
+    queryFn: fetchScreenshots,
+    staleTime: Infinity,
+    gcTime: Infinity,
+    refetchOnWindowFocus: false
+  })
 
   const [oldCode, setOldCode] = useState<string | null>(null)
   const [newCode, setNewCode] = useState<string | null>(null)
@@ -215,23 +234,8 @@ const Debug: React.FC<DebugProps> = ({ isProcessing, setIsProcessing }) => {
     variant: "neutral"
   })
 
-  const [isTooltipVisible, setIsTooltipVisible] = useState(false)
-  const [tooltipHeight, setTooltipHeight] = useState(0)
-
-  const { data: extraScreenshots = [], refetch } = useQuery({
-    queryKey: ["extras"],
-    queryFn: async () => {
-      try {
-        const existing = await window.electronAPI.getScreenshots()
-        return existing
-      } catch (error) {
-        console.error("Error loading extra screenshots:", error)
-        return []
-      }
-    },
-    staleTime: Infinity,
-    cacheTime: Infinity
-  })
+  const queryClient = useQueryClient()
+  const contentRef = useRef<HTMLDivElement>(null)
 
   const showToast = (
     title: string,
@@ -243,7 +247,7 @@ const Debug: React.FC<DebugProps> = ({ isProcessing, setIsProcessing }) => {
   }
 
   const handleDeleteExtraScreenshot = async (index: number) => {
-    const screenshotToDelete = extraScreenshots[index]
+    const screenshotToDelete = screenshots[index]
 
     try {
       const response = await window.electronAPI.deleteScreenshot(
@@ -285,7 +289,7 @@ const Debug: React.FC<DebugProps> = ({ isProcessing, setIsProcessing }) => {
       window.electronAPI.onScreenshotTaken(() => refetch()),
       window.electronAPI.onResetView(() => refetch()),
       window.electronAPI.onDebugSuccess(() => {
-        setIsProcessing(false) //all the other stuff ahapepns in the parent component, so we just need to do this.
+        setIsProcessing(false)
       }),
       window.electronAPI.onDebugStart(() => {
         setIsProcessing(true)
@@ -306,7 +310,7 @@ const Debug: React.FC<DebugProps> = ({ isProcessing, setIsProcessing }) => {
       if (contentRef.current) {
         let contentHeight = contentRef.current.scrollHeight
         const contentWidth = contentRef.current.scrollWidth
-        if (isTooltipVisible) {
+        if (tooltipVisible) {
           contentHeight += tooltipHeight
         }
         window.electronAPI.updateContentDimensions({
@@ -326,10 +330,10 @@ const Debug: React.FC<DebugProps> = ({ isProcessing, setIsProcessing }) => {
       resizeObserver.disconnect()
       cleanupFunctions.forEach((cleanup) => cleanup())
     }
-  }, [queryClient])
+  }, [queryClient, setIsProcessing])
 
   const handleTooltipVisibilityChange = (visible: boolean, height: number) => {
-    setIsTooltipVisible(visible)
+    setTooltipVisible(visible)
     setTooltipHeight(height)
   }
 
@@ -350,7 +354,7 @@ const Debug: React.FC<DebugProps> = ({ isProcessing, setIsProcessing }) => {
         <div className="pb-3">
           <div className="space-y-3 w-fit">
             <ScreenshotQueue
-              screenshots={extraScreenshots}
+              screenshots={screenshots}
               onDeleteScreenshot={handleDeleteExtraScreenshot}
               isLoading={isProcessing}
             />
@@ -360,7 +364,7 @@ const Debug: React.FC<DebugProps> = ({ isProcessing, setIsProcessing }) => {
 
       {/* Navbar of commands with the tooltip */}
       <SolutionCommands
-        extraScreenshots={extraScreenshots}
+        screenshots={screenshots}
         onTooltipVisibilityChange={handleTooltipVisibilityChange}
         isProcessing={isProcessing}
       />
