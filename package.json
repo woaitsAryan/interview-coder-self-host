@@ -5,7 +5,7 @@
   "scripts": {
     "clean": "rimraf dist dist-electron",
     "dev": "npm run clean && cross-env NODE_ENV=development vite --force",
-    "build": "npm run clean && cross-env NODE_ENV=production tsc && vite build && node -r dotenv/config ./node_modules/.bin/electron-builder --mac --config.mac.identity=null --config.extraMetadata.VITE_SUPABASE_URL=$VITE_SUPABASE_URL --config.extraMetadata.VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY --config.extraMetadata.VITE_WEBSITE_URL=$VITE_WEBSITE_URL --config.extraMetadata.VITE_SUPABASE_JWT=$VITE_SUPABASE_JWT --config.extraMetadata.SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY --config.extraMetadata.GOOGLE_DESKTOP_CLIENT_ID=$GOOGLE_DESKTOP_CLIENT_ID",
+    "build": "npm run clean && cross-env NODE_ENV=production tsc && vite build && node -r dotenv/config ./node_modules/.bin/electron-builder --mac --config.mac.identity=null --config.extraMetadata.VITE_SUPABASE_URL=$VITE_SUPABASE_URL --config.extraMetadata.VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY --config.extraMetadata.VITE_WEBSITE_URL=$VITE_WEBSITE_URL --config.extraMetadata.VITE_SUPABASE_JWT=$VITE_SUPABASE_JWT --config.extraMetadata.SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY",
     "preview": "vite preview",
     "electron:dev": "cross-env NODE_ENV=development concurrently -k \"npm run dev\" \"npm run watch\" \"wait-on http://localhost:54321 && wait-on http://localhost:54322 && electron .\"",
     "app:dev": "cross-env  concurrently \"vite\" \"wait-on http://localhost:54321 && electron .\"",

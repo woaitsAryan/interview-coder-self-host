@@ -15,10 +15,7 @@ export default defineConfig(({ command, mode }) => {
   console.log("VITE_SUPABASE_ANON_KEY:", env.VITE_SUPABASE_ANON_KEY)
   console.log("VITE_WEBSITE_URL:", env.VITE_WEBSITE_URL)
   console.log("VITE_SUPABASE_JWT:", env.VITE_SUPABASE_JWT)
-  console.log(
-    "VITE_GOOGLE_DESKTOP_CLIENT_ID:",
-    env.VITE_GOOGLE_DESKTOP_CLIENT_ID
-  )
+
   console.log("================================")
 
   return {
@@ -82,9 +79,6 @@ export default defineConfig(({ command, mode }) => {
       "process.env.VITE_SUPABASE_JWT": JSON.stringify(env.VITE_SUPABASE_JWT),
       "process.env.SUPABASE_SERVICE_ROLE_KEY": JSON.stringify(
         env.SUPABASE_SERVICE_ROLE_KEY
-      ),
-      "process.env.VITE_GOOGLE_DESKTOP_CLIENT_ID": JSON.stringify(
-        env.VITE_GOOGLE_DESKTOP_CLIENT_ID
       )
     },
     build: {
