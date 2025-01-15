@@ -3,15 +3,36 @@
 import { BrowserWindow, screen } from "electron"
 import { AppState } from "main"
 import path from "node:path"
+import { IncomingMessage, ServerResponse } from "http"
 
 const isDev = process.env.NODE_ENV === "development"
 const isMac = process.platform === "darwin"
 
-// In development, always use the Vite dev server
-// In production, use the built files
+// In development, use Vite dev server
+// In production, use the built files but ensure OAuth callback server is running
 const startUrl = isDev
   ? process.env.VITE_DEV_SERVER_URL || "http://localhost:54321"
   : `file://${path.join(__dirname, "../dist/index.html")}`
+
+// Set up OAuth callback listener in production
+if (!isDev) {
+  const http = require("http")
+  const server = http.createServer(
+    (req: IncomingMessage, res: ServerResponse) => {
+      if (req.url?.startsWith("/oauth/callback")) {
+        res.writeHead(200, { "Content-Type": "text/html" })
+        res.end("<script>window.close()</script>")
+      } else {
+        res.writeHead(404)
+        res.end()
+      }
+    }
+  )
+
+  server.listen(54321, "localhost", () => {
+    console.log("OAuth callback server listening on port 54321")
+  })
+}
 
 console.log("Environment:", process.env.NODE_ENV)
 console.log("Start URL:", startUrl)
@@ -95,7 +116,8 @@ export class WindowHelper {
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
-        preload: path.join(__dirname, "preload.js")
+        preload: path.join(__dirname, "preload.js"),
+        scrollBounce: true // Enable smooth scrolling
       },
       show: true,
       frame: false,
@@ -109,6 +131,11 @@ export class WindowHelper {
     }
 
     this.mainWindow = new BrowserWindow(windowSettings)
+
+    // Enable scrolling and interaction
+    this.mainWindow.webContents.setZoomFactor(1)
+    this.mainWindow.setIgnoreMouseEvents(false)
+    this.mainWindow.setFocusable(true)
 
     this.mainWindow.setContentProtection(true)
     // this.mainWindow.webContents.openDevTools()
@@ -200,6 +227,15 @@ export class WindowHelper {
     const bounds = this.mainWindow.getBounds()
     this.windowPosition = { x: bounds.x, y: bounds.y }
     this.windowSize = { width: bounds.width, height: bounds.height }
+
+    // First make the window transparent to mouse events
+    this.mainWindow.setIgnoreMouseEvents(true, { forward: true })
+    this.mainWindow.setFocusable(false)
+
+    // Set opacity to 0 before hiding
+    this.mainWindow.setOpacity(0)
+
+    // Hide the window
     this.mainWindow.hide()
     this.isWindowVisible = false
   }
@@ -221,6 +257,16 @@ export class WindowHelper {
       })
     }
 
+    // Make window fully interactive before showing
+    this.mainWindow.setIgnoreMouseEvents(false)
+    this.mainWindow.setFocusable(true)
+
+    // Show window with initial opacity of 0
+    this.mainWindow.setOpacity(0)
+    this.mainWindow.show()
+
+    // Fade in the window
+    this.mainWindow.setOpacity(1)
     this.mainWindow.showInactive()
 
     if (focusedWindow && !focusedWindow.isDestroyed()) {

@@ -5,12 +5,12 @@
   "scripts": {
     "clean": "rimraf dist dist-electron",
     "dev": "npm run clean && cross-env NODE_ENV=development vite --force",
-    "build": "npm run clean && cross-env NODE_ENV=production tsc && vite build && electron-builder --mac",
+    "build": "npm run clean && cross-env NODE_ENV=production tsc && vite build && node -r dotenv/config ./node_modules/.bin/electron-builder --mac --config.mac.identity=null --config.extraMetadata.VITE_SUPABASE_URL=$VITE_SUPABASE_URL --config.extraMetadata.VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY --config.extraMetadata.VITE_WEBSITE_URL=$VITE_WEBSITE_URL --config.extraMetadata.VITE_SUPABASE_JWT=$VITE_SUPABASE_JWT --config.extraMetadata.SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY --config.extraMetadata.GOOGLE_DESKTOP_CLIENT_ID=$GOOGLE_DESKTOP_CLIENT_ID",
     "preview": "vite preview",
     "electron:dev": "cross-env NODE_ENV=development concurrently -k \"npm run dev\" \"npm run watch\" \"wait-on http://localhost:54321 && wait-on http://localhost:54322 && electron .\"",
-    "app:dev": "cross-env NODE_ENV=development concurrently \"vite\" \"wait-on http://localhost:54321 && electron .\"",
+    "app:dev": "cross-env  concurrently \"vite\" \"wait-on http://localhost:54321 && electron .\"",
     "watch": "tsc -p electron/tsconfig.json --watch",
-    "app:dir": "electron-builder --dir",
+    "app:dir": "npm run clean && cross-env NODE_ENV=development tsc && vite build && node -r dotenv/config ./node_modules/.bin/electron-builder --dir --config.mac.identity=null",
     "app:dist": "electron-builder",
     "reset": "npm run clean && rm -rf node_modules && npm cache clean --force && npm install && npm run dev"
   },
@@ -45,7 +45,8 @@
       "gatekeeperAssess": false,
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.plist",
-      "identity": "Chungin Lee (7JVNAY4725)"
+      "identity": null,
+      "notarize": false
     },
     "win": {
       "target": [
@@ -63,6 +64,16 @@
       "provider": "github",
       "owner": "ibttf",
       "repo": "interview-coder-v1"
+    },
+    "extraResources": [
+      {
+        "from": ".env",
+        "to": ".env"
+      }
+    ],
+    "extraMetadata": {
+      "main": "dist-electron/main.js",
+      "dev": true
     }
   },
   "keywords": [],
