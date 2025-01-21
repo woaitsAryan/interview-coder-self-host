@@ -111,45 +111,8 @@ const CodeComparisonSection = ({
         </div>
       ) : (
         <div className="flex flex-row gap-0.5 bg-[#161b22] rounded-lg overflow-hidden">
-          {/* Previous Code */}
-          <div className="w-1/2 border-r border-gray-700">
-            <div className="bg-[#2d333b] px-3 py-1.5">
-              <h3 className="text-[11px] font-medium text-gray-200">
-                Previous Version
-              </h3>
-            </div>
-            <div className="p-3 overflow-x-auto">
-              <SyntaxHighlighter
-                language="python"
-                style={dracula}
-                customStyle={{
-                  maxWidth: "100%",
-                  margin: 0,
-                  padding: "1rem",
-                  whiteSpace: "pre-wrap",
-                  wordBreak: "break-all"
-                }}
-                wrapLines={true}
-                showLineNumbers={true}
-                lineProps={(lineNumber) => {
-                  const line = leftLines[lineNumber - 1]
-                  return {
-                    style: {
-                      display: "block",
-                      backgroundColor: line?.removed
-                        ? "rgba(139, 0, 0, 0.2)"
-                        : "transparent"
-                    }
-                  }
-                }}
-              >
-                {leftLines.map((line) => line.value).join("\n")}
-              </SyntaxHighlighter>
-            </div>
-          </div>
-
           {/* New Code */}
-          <div className="w-1/2">
+          <div className="w-full">
             <div className="bg-[#2d333b] px-3 py-1.5">
               <h3 className="text-[11px] font-medium text-gray-200">
                 New Version

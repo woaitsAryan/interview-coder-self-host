@@ -83,6 +83,10 @@ export class ProcessingHelper {
 
         // Only set view to solutions if processing succeeded
         console.log("Setting view to solutions after successful processing")
+        mainWindow.webContents.send(
+          this.appState.PROCESSING_EVENTS.SOLUTION_SUCCESS,
+          result.data
+        )
         this.appState.setView("solutions")
       } catch (error: any) {
         console.error("Processing error:", error)
@@ -175,79 +179,164 @@ export class ProcessingHelper {
     screenshots: Array<{ path: string; data: string }>,
     signal: AbortSignal
   ) {
-    try {
-      const imageDataList = screenshots.map((screenshot) => screenshot.data)
-      const mainWindow = this.appState.getMainWindow()
-      let problemInfo
+    const MAX_RETRIES = 2
+    let retryCount = 0
 
-      // First API call - extract problem info
+    while (retryCount <= MAX_RETRIES) {
       try {
-        const extractResponse = await axios.post(
-          `${API_BASE_URL}/api/extract`,
-          { imageDataList },
-          { signal }
-        )
+        const imageDataList = screenshots.map((screenshot) => screenshot.data)
+        const mainWindow = this.appState.getMainWindow()
+        let problemInfo
 
-        problemInfo = extractResponse.data
-
-        // Store problem info in AppState
-        this.appState.setProblemInfo(problemInfo)
-
-        // Send first success event
-        if (mainWindow) {
-          mainWindow.webContents.send(
-            this.appState.PROCESSING_EVENTS.PROBLEM_EXTRACTED,
-            problemInfo
+        // First API call - extract problem info
+        try {
+          const extractResponse = await axios.post(
+            `${API_BASE_URL}/api/extract`,
+            { imageDataList },
+            {
+              signal,
+              timeout: 60000, // 60 second timeout
+              validateStatus: function (status) {
+                return status < 500 // Reject if the status code is >= 500
+              },
+              maxRedirects: 5,
+              headers: {
+                "Content-Type": "application/json"
+              }
+            }
           )
+
+          problemInfo = extractResponse.data
+
+          // Store problem info in AppState
+          this.appState.setProblemInfo(problemInfo)
+
+          // Send first success event
+          if (mainWindow) {
+            mainWindow.webContents.send(
+              this.appState.PROCESSING_EVENTS.PROBLEM_EXTRACTED,
+              problemInfo
+            )
+
+            // Generate solutions after successful extraction
+            const solutionsResult = await this.generateSolutionsHelper(signal)
+            if (solutionsResult.success) {
+              // Clear any existing extra screenshots before transitioning to solutions view
+              this.screenshotHelper.clearExtraScreenshotQueue()
+              mainWindow.webContents.send(
+                this.appState.PROCESSING_EVENTS.SOLUTION_SUCCESS,
+                solutionsResult.data
+              )
+              return { success: true, data: solutionsResult.data }
+            } else {
+              throw new Error(
+                solutionsResult.error || "Failed to generate solutions"
+              )
+            }
+          }
+        } catch (error: any) {
+          console.error("API Error Details:", {
+            status: error.response?.status,
+            data: error.response?.data,
+            message: error.message,
+            code: error.code
+          })
+
+          // Network errors that might benefit from retry
+          if (
+            error.code === "ECONNRESET" ||
+            error.code === "ECONNABORTED" ||
+            error.message === "socket hang up" ||
+            error.message.includes("network") ||
+            error.response?.status >= 500
+          ) {
+            if (retryCount < MAX_RETRIES) {
+              console.log(
+                `Retrying request (attempt ${retryCount + 1} of ${MAX_RETRIES})`
+              )
+              retryCount++
+              // Wait before retrying (exponential backoff)
+              await new Promise((resolve) =>
+                setTimeout(resolve, 1000 * Math.pow(2, retryCount))
+              )
+              continue
+            }
+          }
+
+          // Handle different types of server errors
+          if (error.response?.status) {
+            switch (error.response.status) {
+              case 500:
+                throw new Error(
+                  "Server error occurred. Please try again in a few moments."
+                )
+              case 504:
+                throw new Error(
+                  "Request timed out. The server took too long to respond. Please try again."
+                )
+              case 503:
+                throw new Error(
+                  "Service temporarily unavailable. Please try again later."
+                )
+              default:
+                if (error.response.status >= 500) {
+                  throw new Error(
+                    `Server error (${error.response.status}). Please try again later.`
+                  )
+                }
+            }
+          }
+
+          // Handle specific network errors
+          if (error.message === "socket hang up") {
+            throw new Error("Connection was interrupted. Please try again.")
+          }
+          if (error.code === "ECONNRESET") {
+            throw new Error("Connection was reset. Please try again.")
+          }
+          if (error.code === "ECONNABORTED") {
+            throw new Error("Request timed out. Please try again.")
+          }
+
+          // Handle API-specific errors
+          if (
+            error.response?.data?.error &&
+            typeof error.response.data.error === "string"
+          ) {
+            if (error.response.data.error.includes("Operation timed out")) {
+              throw new Error(
+                "Operation timed out after 1 minute. Please try again."
+              )
+            }
+            if (error.response.data.error.includes("API Key out of credits")) {
+              throw new Error(error.response.data.error)
+            }
+            throw new Error(error.response.data.error)
+          }
+
+          // If we get here, it's an unknown error
+          throw new Error(error.message || "An unknown error occurred")
         }
       } catch (error: any) {
-        if (error.response?.data?.error?.includes("Operation timed out")) {
-          // Cancel ongoing API requests
-          this.cancelOngoingRequests()
-          // Clear both screenshot queues
-          this.appState.clearQueues()
-          // Update view state to queue
-          this.appState.setView("queue")
-          // Notify renderer to switch view
-          if (mainWindow && !mainWindow.isDestroyed()) {
-            mainWindow.webContents.send("reset-view")
-            mainWindow.webContents.send(
-              this.appState.PROCESSING_EVENTS.INITIAL_SOLUTION_ERROR,
-              "Operation timed out after 1 minute. Please try again."
-            )
-          }
-          throw new Error(
-            "Operation timed out after 1 minute. Please try again."
-          )
-        }
-        if (error.response?.data?.error?.includes("API Key out of credits")) {
-          throw new Error(error.response.data.error)
-        }
-        throw error
-      }
+        // Log the full error for debugging
+        console.error("Processing error details:", {
+          message: error.message,
+          code: error.code,
+          response: error.response?.data,
+          retryCount
+        })
 
-      // Second API call - generate solutions
-      if (mainWindow) {
-        const solutionsResult = await this.generateSolutionsHelper(signal)
-        if (solutionsResult.success) {
-          // Clear any existing extra screenshots before transitioning to solutions view
-          this.screenshotHelper.clearExtraScreenshotQueue()
-          // Set view to solutions BEFORE sending success event
-          this.appState.setView("solutions")
-          mainWindow.webContents.send(
-            this.appState.PROCESSING_EVENTS.SOLUTION_SUCCESS,
-            solutionsResult.data
-          )
-        } else {
-          throw new Error(
-            solutionsResult.error || "Failed to generate solutions"
-          )
+        // If we've exhausted retries or it's not a retryable error, return the error
+        if (retryCount >= MAX_RETRIES) {
+          return { success: false, error: error.message }
         }
       }
+    }
 
-      return { success: true, data: problemInfo }
-    } catch (error: any) {
-      return { success: false, error: error.message }
+    // If we get here, all retries failed
+    return {
+      success: false,
+      error: "Failed to process after multiple attempts. Please try again."
     }
   }
 
@@ -261,14 +350,25 @@ export class ProcessingHelper {
       const response = await axios.post(
         `${API_BASE_URL}/api/generate`,
         problemInfo,
-        { signal }
+        {
+          signal,
+          timeout: 60000,
+          validateStatus: function (status) {
+            return status < 500
+          },
+          maxRedirects: 5,
+          headers: {
+            "Content-Type": "application/json"
+          }
+        }
       )
 
       return { success: true, data: response.data }
     } catch (error: any) {
       const mainWindow = this.appState.getMainWindow()
 
-      if (error.response?.data?.error?.includes("Operation timed out")) {
+      // Handle timeout errors (both 504 and axios timeout)
+      if (error.code === "ECONNABORTED" || error.response?.status === 504) {
         // Cancel ongoing API requests
         this.cancelOngoingRequests()
         // Clear both screenshot queues
@@ -280,12 +380,12 @@ export class ProcessingHelper {
           mainWindow.webContents.send("reset-view")
           mainWindow.webContents.send(
             this.appState.PROCESSING_EVENTS.INITIAL_SOLUTION_ERROR,
-            "Operation timed out after 1 minute. Please try again."
+            "Request timed out. The server took too long to respond. Please try again."
           )
         }
         return {
           success: false,
-          error: "Operation timed out after 1 minute. Please try again."
+          error: "Request timed out. Please try again."
         }
       }
 
