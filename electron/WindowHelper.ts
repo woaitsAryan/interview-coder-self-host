@@ -55,43 +55,6 @@ export class WindowHelper {
     this.appState = appState
   }
 
-  public setWindowDimensions(width: number, height: number): void {
-    if (!this.mainWindow || this.mainWindow.isDestroyed()) return
-
-    // Get current window position
-    const [currentX, currentY] = this.mainWindow.getPosition()
-
-    // Get screen dimensions
-    const primaryDisplay = screen.getPrimaryDisplay()
-    const workArea = primaryDisplay.workAreaSize
-
-    // Use 75% width if debugging has occurred, otherwise use 60%
-    const maxAllowedWidth = Math.floor(
-      workArea.width * (this.appState.getHasDebugged() ? 0.75 : 0.5)
-    )
-
-    // Ensure width doesn't exceed max allowed width and height is reasonable
-    const newWidth = Math.min(width + 32, maxAllowedWidth)
-    const newHeight = Math.ceil(height)
-
-    // Center the window horizontally if it would go off screen
-    const maxX = workArea.width - newWidth
-    const newX = Math.min(Math.max(currentX, 0), maxX)
-
-    // Update window bounds
-    this.mainWindow.setBounds({
-      x: newX,
-      y: currentY,
-      width: newWidth,
-      height: newHeight
-    })
-
-    // Update internal state
-    this.windowPosition = { x: newX, y: currentY }
-    this.windowSize = { width: newWidth, height: newHeight }
-    this.currentX = newX
-  }
-
   public createWindow(): void {
     if (this.mainWindow !== null) return
 
@@ -131,6 +94,16 @@ export class WindowHelper {
     }
 
     this.mainWindow = new BrowserWindow(windowSettings)
+    this.mainWindow.webContents.openDevTools()
+
+    // Add this one line for auth - handle external URLs
+    this.mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+      if (url.includes("google.com") || url.includes("supabase.co")) {
+        require("electron").shell.openExternal(url)
+        return { action: "deny" }
+      }
+      return { action: "allow" }
+    })
 
     // Enable scrolling and interaction
     this.mainWindow.webContents.setZoomFactor(1)
@@ -357,5 +330,42 @@ export class WindowHelper {
       Math.round(this.currentX),
       Math.round(this.currentY)
     )
+  }
+
+  public setWindowDimensions(width: number, height: number): void {
+    if (!this.mainWindow || this.mainWindow.isDestroyed()) return
+
+    // Get current window position
+    const [currentX, currentY] = this.mainWindow.getPosition()
+
+    // Get screen dimensions
+    const primaryDisplay = screen.getPrimaryDisplay()
+    const workArea = primaryDisplay.workAreaSize
+
+    // Use 75% width if debugging has occurred, otherwise use 60%
+    const maxAllowedWidth = Math.floor(
+      workArea.width * (this.appState.getHasDebugged() ? 0.75 : 0.5)
+    )
+
+    // Ensure width doesn't exceed max allowed width and height is reasonable
+    const newWidth = Math.min(width + 32, maxAllowedWidth)
+    const newHeight = Math.ceil(height)
+
+    // Center the window horizontally if it would go off screen
+    const maxX = workArea.width - newWidth
+    const newX = Math.min(Math.max(currentX, 0), maxX)
+
+    // Update window bounds
+    this.mainWindow.setBounds({
+      x: newX,
+      y: currentY,
+      width: newWidth,
+      height: newHeight
+    })
+
+    // Update internal state
+    this.windowPosition = { x: newX, y: currentY }
+    this.windowSize = { width: newWidth, height: newHeight }
+    this.currentX = newX
   }
 }

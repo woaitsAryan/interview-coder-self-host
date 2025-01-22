@@ -1,5 +1,10 @@
 interface Window {
   electronAPI: {
+    ipcRenderer?: {
+      on: (channel: string, func: (...args: any[]) => void) => void
+      removeListener: (channel: string, func: (...args: any[]) => void) => void
+    }
+
     openSubscriptionPortal: (authData: {
       id: string
       email: string

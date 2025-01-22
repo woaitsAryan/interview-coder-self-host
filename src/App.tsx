@@ -9,7 +9,7 @@ import { supabase } from "./lib/supabase"
 import { useUser } from "./hooks/useUser"
 import SignInForm from "./_pages/SignInForm"
 import SignUpForm from "./_pages/SignUpForm"
-import AuthCallback from "./_pages/AuthCallback"
+
 import SubscribedApp from "./_pages/SubscribedApp"
 import SubscribePage from "./_pages/SubscribePage"
 import {
@@ -85,7 +85,6 @@ function AppRoutes() {
         path="/signup"
         element={user ? <Navigate to="/" /> : <SignUpForm />}
       />
-      <Route path="/auth/callback" element={<AuthCallback />} />
 
       {/* Subscribe route - only accessible when logged in but not subscribed */}
       <Route
@@ -105,6 +104,35 @@ function SubscriptionListener() {
     if (!user?.id) return
 
     console.log("Setting up subscription listener for user:", user.id)
+
+    // Initial subscription check
+    const checkSubscription = async () => {
+      const { data: subscription } = await supabase
+        .from("subscriptions")
+        .select("*")
+        .eq("user_id", user.id)
+        .maybeSingle()
+
+      console.log("Initial subscription check result:", subscription)
+
+      // Force refetch to update UI
+      await queryClient.invalidateQueries({ queryKey: ["user"] })
+      const result = await refetch()
+
+      // Navigate based on subscription status
+      if (!subscription || !result.data?.isSubscribed) {
+        console.log(
+          "No active subscription found, navigating to subscribe page"
+        )
+        navigate("/subscribe", { replace: true })
+      } else {
+        console.log("Active subscription found, navigating to main app")
+        navigate("/", { replace: true })
+      }
+    }
+
+    // Run initial check
+    checkSubscription()
 
     // Listen to all changes on the subscriptions table
     const channel = supabase
@@ -173,15 +201,6 @@ function SubscriptionListener() {
         console.log("Channel status changed to:", status)
         if (status === "SUBSCRIBED") {
           console.log("Successfully subscribed to changes for user:", user.id)
-          // Test the subscription by making a test query
-          supabase
-            .from("subscriptions")
-            .select("*")
-            .eq("user_id", user.id)
-            .single()
-            .then((result) => {
-              console.log("Current subscription data:", result.data)
-            })
         }
       })
 
@@ -196,6 +215,74 @@ function SubscriptionListener() {
 
 // Root component that provides the QueryClient
 function App() {
+  // Dev-only: Listen for token-based auth callback
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      const handleAuthCallbackTokens = (
+        _: any,
+        tokens: { accessToken: string; refreshToken: string }
+      ) => {
+        console.log("Dev IPC: received tokens:", tokens)
+        if (tokens?.accessToken) {
+          supabase.auth.setSession({
+            access_token: tokens.accessToken,
+            refresh_token: tokens.refreshToken
+          })
+        }
+      }
+
+      console.log("DEV: Setting up token-based IPC listener")
+      window.electronAPI?.ipcRenderer?.on(
+        "auth-callback",
+        handleAuthCallbackTokens
+      )
+
+      return () => {
+        window.electronAPI?.ipcRenderer?.removeListener(
+          "auth-callback",
+          handleAuthCallbackTokens
+        )
+      }
+    }
+  }, [])
+
+  // Production-only: Listen for PKCE code callback
+  useEffect(() => {
+    if (!import.meta.env.DEV) {
+      const handleAuthCallbackPKCE = async (data: { code: string }) => {
+        console.log("Production IPC: received code:", data)
+        try {
+          const { code } = data || {}
+          if (!code) {
+            console.error("No code in callback data")
+            return
+          }
+          const { error } = await supabase.auth.exchangeCodeForSession(code)
+          if (error) {
+            console.error("Error exchanging code for session:", error)
+          } else {
+            console.log("Production PKCE: Session exchanged successfully")
+          }
+        } catch (err) {
+          console.error("Production PKCE: Error in auth callback:", err)
+        }
+      }
+
+      console.log("PROD: Setting up PKCE-based IPC listener")
+      window.electronAPI?.ipcRenderer?.on(
+        "auth-callback",
+        handleAuthCallbackPKCE
+      )
+
+      return () => {
+        window.electronAPI?.ipcRenderer?.removeListener(
+          "auth-callback",
+          handleAuthCallbackPKCE
+        )
+      }
+    }
+  }, [])
+
   return (
     <QueryClientProvider client={queryClient}>
       <Router>

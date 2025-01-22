@@ -4,7 +4,7 @@
   "main": "dist-electron/main.js",
   "scripts": {
     "clean": "rimraf dist dist-electron",
-    "dev": "rm -rf dist dist-electron && concurrently \"tsc -w -p tsconfig.electron.json\" \"vite dev\" \"wait-on tcp:5173 && electron .\"",
+    "dev": "rm -rf dist dist-electron && concurrently \"tsc -w -p tsconfig.electron.json\" \"vite dev\" \"wait-on tcp:54321 && electron .\"",
     "build": "rm -rf dist dist-electron && vite build && tsc -p tsconfig.electron.json && electron-builder"
   },
   "build": {

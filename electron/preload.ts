@@ -231,3 +231,20 @@ ipcRenderer.on("restore-focus", () => {
     activeElement.focus()
   }
 })
+
+// Expose protected methods that allow the renderer process to use
+// the ipcRenderer without exposing the entire object
+contextBridge.exposeInMainWorld("electron", {
+  ipcRenderer: {
+    on: (channel: string, func: (...args: any[]) => void) => {
+      if (channel === "auth-callback") {
+        ipcRenderer.on(channel, (event, ...args) => func(...args))
+      }
+    },
+    removeListener: (channel: string, func: (...args: any[]) => void) => {
+      if (channel === "auth-callback") {
+        ipcRenderer.removeListener(channel, (event, ...args) => func(...args))
+      }
+    }
+  }
+})

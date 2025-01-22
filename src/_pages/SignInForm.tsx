@@ -55,7 +55,9 @@ export default function SignInForm() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: import.meta.env.DEV
+            ? "http://localhost:54321/callback"
+            : "interview-coder://callback",
           skipBrowserRedirect: false,
           queryParams: {
             access_type: "offline",

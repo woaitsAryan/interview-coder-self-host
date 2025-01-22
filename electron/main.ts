@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js"
-import { app, BrowserWindow } from "electron"
+import { app, BrowserWindow, shell } from "electron"
 import { initializeIpcHandlers } from "./ipcHandlers"
 import { ProcessingHelper } from "./ProcessingHelper"
 import { ScreenshotHelper } from "./ScreenshotHelper"
@@ -17,7 +17,90 @@ dotenv.config({
     : path.join(process.resourcesPath, ".env")
 })
 
-// Initialize Supabase client
+// Register protocol handler
+if (process.platform === "darwin") {
+  app.setAsDefaultProtocolClient("interview-coder")
+} else {
+  app.setAsDefaultProtocolClient("interview-coder", process.execPath, [
+    path.resolve(process.argv[1] || "")
+  ])
+}
+
+// Handle the protocol. In this case, we choose to show an Error Box.
+app.on("open-url", (event, url) => {
+  event.preventDefault()
+  handleAuthCallback(url)
+})
+
+// Handle auth callback
+async function handleAuthCallback(url: string) {
+  try {
+    console.log("Auth callback received:", url)
+    const urlObj = new URL(url)
+    const code = urlObj.searchParams.get("code")
+
+    if (!code) {
+      console.error("Missing code in callback URL")
+      return
+    }
+
+    const mainWindow = BrowserWindow.getAllWindows()[0]
+    if (mainWindow) {
+      if (isDev) {
+        // In dev, exchange the code for tokens in the main process
+        const { createClient } = await import("@supabase/supabase-js")
+        const supabase = createClient(
+          process.env.VITE_SUPABASE_URL!,
+          process.env.VITE_SUPABASE_ANON_KEY!
+        )
+        const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+        if (error) {
+          console.error("Dev main exchange error:", error)
+          return
+        }
+        if (data?.session) {
+          mainWindow.webContents.send("auth-callback", {
+            accessToken: data.session.access_token,
+            refreshToken: data.session.refresh_token
+          })
+        }
+      } else {
+        // In production, send the code to the renderer
+        mainWindow.webContents.send("auth-callback", { code })
+      }
+    }
+  } catch (error) {
+    console.error("Error handling auth callback:", error)
+  }
+}
+
+// Handle the protocol for Windows
+if (process.defaultApp) {
+  if (process.argv.length >= 2) {
+    app.setAsDefaultProtocolClient("interview-coder", process.execPath, [
+      path.resolve(process.argv[1])
+    ])
+  }
+} else {
+  app.setAsDefaultProtocolClient("interview-coder")
+}
+
+// Handle the protocol callback in Windows
+app.on("second-instance", (event, commandLine) => {
+  const mainWindow = BrowserWindow.getAllWindows()[0]
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) mainWindow.restore()
+    mainWindow.focus()
+  }
+
+  // Look for the custom protocol url
+  const url = commandLine.find((arg) => arg.startsWith("interview-coder://"))
+  if (url) {
+    handleAuthCallback(url)
+  }
+})
+
+// Initialize Supabase client (for admin operations only)
 export const supabase = createClient(
   process.env.VITE_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
