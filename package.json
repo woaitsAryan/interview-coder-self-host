@@ -18,7 +18,7 @@
       ".env"
     ],
     "directories": {
-      "output": "release",
+      "output": "release/${version}",
       "buildResources": "assets"
     },
     "mac": {
@@ -33,25 +33,46 @@
           "arch": "arm64"
         }
       ],
+      "artifactName": "${productName}-Mac-${version}-${arch}.${ext}",
       "icon": "assets/icons/mac/icon.icns",
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.plist",
       "identity": null,
-      "notarize": false
+      "notarize": false,
+      "protocols": {
+        "name": "interview-coder-protocol",
+        "schemes": [
+          "interview-coder"
+        ]
+      }
     },
     "win": {
       "target": [
         "nsis"
       ],
-      "icon": "assets/icons/win/icon.ico"
+      "icon": "assets/icons/win/icon.ico",
+      "artifactName": "${productName}-Windows-${version}.${ext}",
+      "protocols": {
+        "name": "interview-coder-protocol",
+        "schemes": [
+          "interview-coder"
+        ]
+      }
     },
     "linux": {
       "target": [
         "AppImage"
       ],
-      "icon": "assets/icons/png/icon-256x256.png"
+      "icon": "assets/icons/png/icon-256x256.png",
+      "artifactName": "${productName}-Linux-${version}.${ext}",
+      "protocols": {
+        "name": "interview-coder-protocol",
+        "schemes": [
+          "interview-coder"
+        ]
+      }
     },
     "publish": {
       "provider": "github",
