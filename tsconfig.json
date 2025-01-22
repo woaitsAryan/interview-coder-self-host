@@ -1,20 +1,24 @@
 {
   "compilerOptions": {
-    "target": "ESNext",
-    "lib": ["DOM", "DOM.Iterable", "ESNext"], // Browser APIs
-    "module": "ESNext", // For Vite/Modern browsers
-    "moduleResolution": "bundler", // For Vite
-    "jsx": "react-jsx", // React specific
-    "noEmit": true, // Vite handles the building
-    "allowImportingTsExtensions": true,
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ES2020",
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
     "strict": true,
     "noUnusedLocals": false,
-    "noUnusedParameters": true,
+    "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true,
-    "skipLibCheck": true
+    "allowJs": true,
+    "esModuleInterop": true,
+    "allowImportingTsExtensions": true,
+    "types": ["vite/client"]
   },
-  "include": ["src"], // Only React source files
+  "include": ["electron/**/*", "src/**/*"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
