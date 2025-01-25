@@ -9,109 +9,6 @@ import { WindowHelper } from "./WindowHelper"
 import { initAutoUpdater } from "./autoUpdater"
 import * as dotenv from "dotenv"
 
-// Load environment variables from .env file
-const isDev = process.env.NODE_ENV === "development"
-dotenv.config({
-  path: isDev
-    ? path.join(process.cwd(), ".env")
-    : path.join(process.resourcesPath, ".env")
-})
-
-// Register protocol handler
-if (process.platform === "darwin") {
-  app.setAsDefaultProtocolClient("interview-coder")
-} else {
-  app.setAsDefaultProtocolClient("interview-coder", process.execPath, [
-    path.resolve(process.argv[1] || "")
-  ])
-}
-
-// Handle the protocol. In this case, we choose to show an Error Box.
-app.on("open-url", (event, url) => {
-  event.preventDefault()
-  handleAuthCallback(url)
-})
-
-// Handle auth callback
-async function handleAuthCallback(url: string) {
-  try {
-    console.log("Auth callback received:", url)
-    const urlObj = new URL(url)
-    const code = urlObj.searchParams.get("code")
-
-    if (!code) {
-      console.error("Missing code in callback URL")
-      return
-    }
-
-    const mainWindow = BrowserWindow.getAllWindows()[0]
-    if (mainWindow) {
-      if (isDev) {
-        // In dev, exchange the code for tokens in the main process
-        const { createClient } = await import("@supabase/supabase-js")
-        const supabase = createClient(
-          process.env.VITE_SUPABASE_URL!,
-          process.env.VITE_SUPABASE_ANON_KEY!
-        )
-        const { data, error } = await supabase.auth.exchangeCodeForSession(code)
-        if (error) {
-          console.error("Dev main exchange error:", error)
-          return
-        }
-        if (data?.session) {
-          mainWindow.webContents.send("auth-callback", {
-            accessToken: data.session.access_token,
-            refreshToken: data.session.refresh_token
-          })
-        }
-      } else {
-        // In production, send the code to the renderer
-        mainWindow.webContents.send("auth-callback", { code })
-      }
-    }
-  } catch (error) {
-    console.error("Error handling auth callback:", error)
-  }
-}
-
-// Handle the protocol for Windows
-if (process.defaultApp) {
-  if (process.argv.length >= 2) {
-    app.setAsDefaultProtocolClient("interview-coder", process.execPath, [
-      path.resolve(process.argv[1])
-    ])
-  }
-} else {
-  app.setAsDefaultProtocolClient("interview-coder")
-}
-
-// Handle the protocol callback in Windows
-app.on("second-instance", (event, commandLine) => {
-  const mainWindow = BrowserWindow.getAllWindows()[0]
-  if (mainWindow) {
-    if (mainWindow.isMinimized()) mainWindow.restore()
-    mainWindow.focus()
-  }
-
-  // Look for the custom protocol url
-  const url = commandLine.find((arg) => arg.startsWith("interview-coder://"))
-  if (url) {
-    handleAuthCallback(url)
-  }
-})
-
-// Initialize Supabase client (for admin operations only)
-export const supabase = createClient(
-  process.env.VITE_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
-)
-
 export class AppState {
   private static instance: AppState | null = null
 
@@ -291,45 +188,169 @@ export class AppState {
   }
 }
 
-// Application initialization
-async function initializeApp() {
-  const appState = AppState.getInstance()
+// Single Instance Lock
+const gotTheLock = app.requestSingleInstanceLock()
 
-  // Initialize IPC handlers before window creation
-  initializeIpcHandlers(appState)
+if (!gotTheLock) {
+  app.quit()
+} else {
+  app.on("second-instance", (event, commandLine, workingDirectory) => {
+    // Someone tried to run a second instance, we should focus our window.
+    if (AppState.getInstance().getMainWindow()) {
+      const win = AppState.getInstance().getMainWindow()
+      if (win.isMinimized()) win.restore()
+      win.focus()
+    }
+  })
 
-  app.whenReady().then(() => {
-    appState.createWindow()
-    // Register global shortcuts using ShortcutsHelper
-    appState.shortcutsHelper.registerGlobalShortcuts()
-
-    // Initialize auto-updater in production
-    if (app.isPackaged) {
-      initAutoUpdater()
+  const isDev = !app.isPackaged
+  function loadEnvVariables() {
+    // In development, load from project root
+    if (isDev) {
+      dotenv.config({ path: path.join(process.cwd(), ".env") })
     } else {
-      console.log("Running in development mode - auto-updater disabled")
+      // In production, load from the app's resources directory
+      dotenv.config({
+        path: path.join(process.resourcesPath, ".env")
+      })
+    }
+  }
+  loadEnvVariables()
+
+  // Register protocol handler
+  if (process.platform === "darwin") {
+    app.setAsDefaultProtocolClient("interview-coder")
+  } else {
+    app.setAsDefaultProtocolClient("interview-coder", process.execPath, [
+      path.resolve(process.argv[1] || "")
+    ])
+  }
+
+  // Handle the protocol. In this case, we choose to show an Error Box.
+  app.on("open-url", (event, url) => {
+    event.preventDefault()
+    handleAuthCallback(url)
+  })
+
+  // Handle auth callback
+  async function handleAuthCallback(url: string) {
+    try {
+      console.log("Auth callback received:", url)
+      const urlObj = new URL(url)
+      const code = urlObj.searchParams.get("code")
+
+      if (!code) {
+        console.error("Missing code in callback URL")
+        return
+      }
+
+      const mainWindow = BrowserWindow.getAllWindows()[0]
+      if (mainWindow) {
+        if (isDev) {
+          // In dev, exchange the code for tokens in the main process
+          const { createClient } = await import("@supabase/supabase-js")
+          const supabase = createClient(
+            process.env.VITE_SUPABASE_URL!,
+            process.env.VITE_SUPABASE_ANON_KEY!
+          )
+          const { data, error } = await supabase.auth.exchangeCodeForSession(
+            code
+          )
+          if (error) {
+            console.error("Dev main exchange error:", error)
+            return
+          }
+          if (data?.session) {
+            mainWindow.webContents.send("auth-callback", {
+              accessToken: data.session.access_token,
+              refreshToken: data.session.refresh_token
+            })
+          }
+        } else {
+          // In production, send the code to the renderer
+          mainWindow.webContents.send("auth-callback", { code })
+        }
+      }
+    } catch (error) {
+      console.error("Error handling auth callback:", error)
+    }
+  }
+
+  // Handle the protocol for Windows
+  if (process.defaultApp) {
+    if (process.argv.length >= 2) {
+      app.setAsDefaultProtocolClient("interview-coder", process.execPath, [
+        path.resolve(process.argv[1])
+      ])
+    }
+  } else {
+    app.setAsDefaultProtocolClient("interview-coder")
+  }
+
+  // Handle the protocol callback in Windows
+  app.on("second-instance", (event, commandLine) => {
+    const mainWindow = BrowserWindow.getAllWindows()[0]
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore()
+      mainWindow.focus()
+    }
+
+    // Look for the custom protocol url
+    const url = commandLine.find((arg) => arg.startsWith("interview-coder://"))
+    if (url) {
+      handleAuthCallback(url)
     }
   })
 
-  app.on("activate", () => {
-    if (appState.getMainWindow() === null) {
+  // Application initialization
+  async function initializeApp() {
+    const appState = AppState.getInstance()
+
+    // Initialize IPC handlers before window creation
+    initializeIpcHandlers(appState)
+
+    app.whenReady().then(() => {
+      // Load environment variables now that app is ready
+      try {
+        loadEnvVariables()
+      } catch (error) {
+        console.error("Failed to load environment variables:", error)
+        app.quit()
+        return
+      }
+
       appState.createWindow()
-    }
-  })
+      // Register global shortcuts using ShortcutsHelper
+      appState.shortcutsHelper.registerGlobalShortcuts()
 
-  // Quit when all windows are closed, except on macOS
-  app.on("window-all-closed", () => {
-    if (process.platform !== "darwin") {
-      app.quit()
-    }
-  })
+      // Initialize auto-updater in production
+      if (app.isPackaged) {
+        initAutoUpdater()
+      } else {
+        console.log("Running in development mode - auto-updater disabled")
+      }
+    })
 
-  app.dock?.hide() // Hide dock icon (optional)
-  app.commandLine.appendSwitch("disable-background-timer-throttling")
+    app.on("activate", () => {
+      if (appState.getMainWindow() === null) {
+        appState.createWindow()
+      }
+    })
 
-  console.log("Preload script path:", path.join(__dirname, "preload.js"))
-  console.log("__dirname:", __dirname)
+    // Quit when all windows are closed, except on macOS
+    app.on("window-all-closed", () => {
+      if (process.platform !== "darwin") {
+        app.quit()
+      }
+    })
+
+    app.dock?.hide() // Hide dock icon (optional)
+    app.commandLine.appendSwitch("disable-background-timer-throttling")
+
+    console.log("Preload script path:", path.join(__dirname, "preload.js"))
+    console.log("__dirname:", __dirname)
+  }
+
+  // Start the application (only once)
+  initializeApp().catch(console.error)
 }
-
-// Start the application
-initializeApp().catch(console.error)

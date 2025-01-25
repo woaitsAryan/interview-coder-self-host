@@ -138,45 +138,10 @@ This will:
 
 ## Building (for Roy)
 
-notarizing script is wack asf, we have an auto code signing in the package.json, but we need to manually notarize
+after npm run build, hit:
 
 ```
-xcrun notarytool store-credentials "my-apple-creds" \
-  --apple-id "YOUR_APPLE_ID@example.com" \
-  --team-id "YOUR_TEAM_ID" \
-  --password "XXXX-XXXX-XXXX-XXXX"
-```
-
-run that ^ and then cd into release and run
-
-```
-
-
-#intel
-arch -arm64 xcrun notarytool submit "/Users/roylee0912/Development/interview-coder-v1/release/Interview Coder-1.0.0.dmg" \
-  --keychain-profile "my-apple-creds" \
-  --wait
-
-
-#silicon
-arch -arm64 xcrun notarytool submit "/Users/roylee0912/Development/interview-coder-v1/release/Interview Coder-1.0.0-arm64.dmg" \
-  --keychain-profile "my-apple-creds" \
-  --wait
-
-
-
-xcrun stapler staple "Interview Coder-1.0.0.dmg"
-
-
-xcrun stapler staple "Interview Coder-1.0.0-arm64.dmg"
-
-#validating
-
-xcrun stapler validate "/Users/roylee0912/Development/interview-coder-v1/release/Interview Coder-1.0.0.dmg"
-
-xcrun stapler validate "/Users/roylee0912/Development/interview-coder-v1/release/Interview Coder-1.0.0-arm64.dmg"
-
-
+node scripts/manual-notarize.js "release/Interview Coder-x64.dmg" && xcrun stapler staple "release/Interview Coder-x64.dmg" && node scripts/manual-notarize.js "release/Interview Coder-arm64.dmg" && xcrun stapler staple "release/Interview Coder-arm64.dmg"
 ```
 
 ## Contributing

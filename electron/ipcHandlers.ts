@@ -1,11 +1,20 @@
 // ipcHandlers.ts
 
+import { createClient } from "@supabase/supabase-js"
 import { ipcMain, shell } from "electron"
-import { AppState, supabase } from "./main"
+import { AppState } from "./main"
 import { randomBytes } from "crypto"
 
 export function initializeIpcHandlers(appState: AppState): void {
   console.log("Initializing IPC handlers")
+
+  // Create Supabase client when needed
+  const createSupabaseClient = () => {
+    return createClient(
+      process.env.VITE_SUPABASE_URL!,
+      process.env.VITE_SUPABASE_ANON_KEY!
+    )
+  }
 
   ipcMain.handle(
     "update-content-dimensions",
@@ -90,6 +99,7 @@ export function initializeIpcHandlers(appState: AppState): void {
       const token = randomBytes(32).toString("hex")
 
       // Store the token in Supabase with a 5-minute expiration
+      const supabase = createSupabaseClient()
       const { error } = await supabase.from("auth_tokens").insert({
         user_id: authData.id,
         token: token,

@@ -1,17 +1,20 @@
 // electron/WindowHelper.ts
 
-import { BrowserWindow, screen } from "electron"
+import { app, BrowserWindow, screen } from "electron"
 import { AppState } from "main"
 import path from "node:path"
 import { IncomingMessage, ServerResponse } from "http"
 
-const isDev = process.env.NODE_ENV === "development"
 const isMac = process.platform === "darwin"
 
 // In development, use Vite dev server
 // In production, use the built files but ensure OAuth callback server is running
+const isDev = !app.isPackaged
+
+// In development, use Vite dev server
+// In production, use the built files
 const startUrl = isDev
-  ? process.env.VITE_DEV_SERVER_URL || "http://localhost:54321"
+  ? "http://localhost:54321" // Use Vite's default port
   : `file://${path.join(__dirname, "../dist/index.html")}`
 
 // Set up OAuth callback listener in production
