@@ -134,6 +134,7 @@ const Debug: React.FC<DebugProps> = ({ isProcessing, setIsProcessing }) => {
       } else {
         console.error("Failed to delete extra screenshot:", response.error)
       }
+    } catch (error) {
       console.error("Error deleting extra screenshot:", error)
     }
   }

@@ -1,6 +1,7 @@
 import { supabase } from "./lib/supabase"
 import SubscribedApp from "./_pages/SubscribedApp"
 import SubscribePage from "./_pages/SubscribePage"
+import { UpdateNotification } from "./components/UpdateNotification"
 import {
   QueryClient,
   QueryClientProvider,
@@ -460,6 +461,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AppContent />
+      <UpdateNotification />
     </QueryClientProvider>
   )
 }

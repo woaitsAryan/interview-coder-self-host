@@ -45,6 +45,10 @@ interface ElectronAPI {
   triggerMoveDown: () => Promise<{ success: boolean; error?: string }>
   onSubscriptionUpdated: (callback: () => void) => () => void
   onSubscriptionPortalClosed: (callback: () => void) => () => void
+  startUpdate: () => Promise<{ success: boolean; error?: string }>
+  installUpdate: () => void
+  onUpdateAvailable: (callback: (info: any) => void) => () => void
+  onUpdateDownloaded: (callback: (info: any) => void) => () => void
 }
 
 export const PROCESSING_EVENTS = {
@@ -208,6 +212,22 @@ const electronAPI = {
     ipcRenderer.on(PROCESSING_EVENTS.RESET, subscription)
     return () => {
       ipcRenderer.removeListener(PROCESSING_EVENTS.RESET, subscription)
+    }
+  },
+  startUpdate: () => ipcRenderer.invoke("start-update"),
+  installUpdate: () => ipcRenderer.invoke("install-update"),
+  onUpdateAvailable: (callback: (info: any) => void) => {
+    const subscription = (_: any, info: any) => callback(info)
+    ipcRenderer.on("update-available", subscription)
+    return () => {
+      ipcRenderer.removeListener("update-available", subscription)
+    }
+  },
+  onUpdateDownloaded: (callback: (info: any) => void) => {
+    const subscription = (_: any, info: any) => callback(info)
+    ipcRenderer.on("update-downloaded", subscription)
+    return () => {
+      ipcRenderer.removeListener("update-downloaded", subscription)
     }
   }
 } as ElectronAPI
