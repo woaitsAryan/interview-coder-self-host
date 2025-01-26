@@ -300,7 +300,9 @@ async function createWindow(): Promise<void> {
 
   // Configure window behavior
   state.mainWindow.webContents.setZoomFactor(1)
-  // state.mainWindow.webContents.openDevTools()
+  if (isDev) {
+    state.mainWindow.webContents.openDevTools()
+  }
   state.mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     console.log("Attempting to open URL:", url)
     if (url.includes("google.com") || url.includes("supabase.co")) {
@@ -480,11 +482,13 @@ async function initializeApp() {
     await createWindow()
     state.shortcutsHelper?.registerGlobalShortcuts()
 
-    if (app.isPackaged) {
-      initAutoUpdater()
-    } else {
-      console.log("Running in development mode - auto-updater disabled")
-    }
+    // Initialize auto-updater regardless of environment
+    initAutoUpdater()
+    console.log(
+      "Auto-updater initialized in",
+      isDev ? "development" : "production",
+      "mode"
+    )
   } catch (error) {
     console.error("Failed to initialize application:", error)
     app.quit()

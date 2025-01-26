@@ -1,6 +1,6 @@
 {
   "name": "interview-coder-v1",
-  "version": "1.0.1",
+  "version": "1.0.3",
   "main": "dist-electron/main.js",
   "scripts": {
     "clean": "rimraf dist dist-electron",
@@ -22,6 +22,7 @@
     },
     "asar": true,
     "compression": "maximum",
+    "generateUpdatesFilesForAllChannels": true,
     "mac": {
       "category": "public.app-category.developer-tools",
       "target": [
@@ -74,13 +75,16 @@
         ]
       }
     },
-    "publish": {
-      "provider": "github",
-      "owner": "ibttf",
-      "repo": "interview-coder-v1",
-      "private": true,
-      "token": "process.env.GH_TOKEN"
-    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "ibttf",
+        "repo": "interview-coder-v1",
+        "private": true,
+        "token": "process.env.GH_TOKEN",
+        "releaseType": "release"
+      }
+    ],
     "extraResources": [
       {
         "from": ".env",
@@ -113,6 +117,7 @@
     "clsx": "^2.1.1",
     "diff": "^7.0.0",
     "dotenv": "^16.4.7",
+    "electron-log": "^5.2.4",
     "electron-store": "^10.0.0",
     "electron-updater": "^6.3.9",
     "form-data": "^4.0.1",

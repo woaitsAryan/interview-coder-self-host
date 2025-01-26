@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react"
-import { Dialog, DialogContent, DialogTrigger } from "./ui/dialog"
+import { Dialog, DialogContent } from "./ui/dialog"
 import { Button } from "./ui/button"
 import { useToast } from "../contexts/toast"
 
@@ -10,29 +10,35 @@ export const UpdateNotification: React.FC = () => {
   const { showToast } = useToast()
 
   useEffect(() => {
-    const unsubscribeAvailable = window.electronAPI.onUpdateAvailable(() => {
-      setUpdateAvailable(true)
-    })
+    console.log("UpdateNotification: Setting up event listeners")
 
-    const unsubscribeDownloaded = window.electronAPI.onUpdateDownloaded(() => {
-      setUpdateDownloaded(true)
-      setIsDownloading(false)
-      showToast(
-        "Update Ready",
-        "A new version has been downloaded and will be installed when you restart the app.",
-        "success"
-      )
-    })
+    const unsubscribeAvailable = window.electronAPI.onUpdateAvailable(
+      (info) => {
+        console.log("UpdateNotification: Update available received", info)
+        setUpdateAvailable(true)
+      }
+    )
+
+    const unsubscribeDownloaded = window.electronAPI.onUpdateDownloaded(
+      (info) => {
+        console.log("UpdateNotification: Update downloaded received", info)
+        setUpdateDownloaded(true)
+        setIsDownloading(false)
+      }
+    )
 
     return () => {
+      console.log("UpdateNotification: Cleaning up event listeners")
       unsubscribeAvailable()
       unsubscribeDownloaded()
     }
   }, [])
 
   const handleStartUpdate = async () => {
+    console.log("UpdateNotification: Starting update download")
     setIsDownloading(true)
     const result = await window.electronAPI.startUpdate()
+    console.log("UpdateNotification: Update download result", result)
     if (!result.success) {
       setIsDownloading(false)
       showToast("Error", "Failed to download update", "error")
@@ -40,23 +46,23 @@ export const UpdateNotification: React.FC = () => {
   }
 
   const handleInstallUpdate = () => {
+    console.log("UpdateNotification: Installing update")
     window.electronAPI.installUpdate()
   }
 
+  console.log("UpdateNotification: Render state", {
+    updateAvailable,
+    updateDownloaded,
+    isDownloading
+  })
   if (!updateAvailable && !updateDownloaded) return null
 
   return (
-    <Dialog>
-      <DialogTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
-          className="fixed bottom-4 right-4 bg-black/80 text-white border-white/20 hover:bg-black/60"
-        >
-          {updateDownloaded ? "Update Ready" : "Update Available"}
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="bg-black/90 text-white border-white/20">
+    <Dialog open={true}>
+      <DialogContent
+        className="bg-black/90 text-white border-white/20"
+        onPointerDownOutside={(e) => e.preventDefault()}
+      >
         <div className="p-4">
           <h2 className="text-lg font-semibold mb-4">
             {updateDownloaded
@@ -66,7 +72,7 @@ export const UpdateNotification: React.FC = () => {
           <p className="text-sm text-white/70 mb-6">
             {updateDownloaded
               ? "The update has been downloaded and will be installed when you restart the app."
-              : "Would you like to download the latest version?"}
+              : "A new version of Interview Coder is available. Please update to continue using the app."}
           </p>
           <div className="flex justify-end gap-2">
             {updateDownloaded ? (
