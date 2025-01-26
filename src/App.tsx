@@ -285,6 +285,7 @@ function AuthForm() {
 function AppContent() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const [subscriptionLoading, setSubscriptionLoading] = useState(false)
   const [isSubscribed, setIsSubscribed] = useState(false)
   const queryClient = useQueryClient()
 
@@ -308,13 +309,18 @@ function AppContent() {
         return
       }
 
-      const { data: subscription } = await supabase
-        .from("subscriptions")
-        .select("*")
-        .eq("user_id", user.id)
-        .maybeSingle()
+      setSubscriptionLoading(true)
+      try {
+        const { data: subscription } = await supabase
+          .from("subscriptions")
+          .select("*")
+          .eq("user_id", user.id)
+          .maybeSingle()
 
-      setIsSubscribed(!!subscription)
+        setIsSubscribed(!!subscription)
+      } finally {
+        setSubscriptionLoading(false)
+      }
     }
 
     checkSubscription()
@@ -388,10 +394,15 @@ function AppContent() {
     }
   }, [queryClient, user?.id])
 
-  if (loading) {
+  if (loading || (user && subscriptionLoading)) {
     return (
-      <div className="flex items-center justify-center">
-        <div className="text-black">Loading...</div>
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-6 h-6 border-2 border-white/20 border-t-white/80 rounded-full animate-spin"></div>
+          <p className="text-white/60 text-sm">
+            {loading ? "Loading..." : "Checking subscription..."}
+          </p>
+        </div>
       </div>
     )
   }
