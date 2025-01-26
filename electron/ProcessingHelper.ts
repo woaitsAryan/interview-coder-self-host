@@ -190,7 +190,7 @@ export class ProcessingHelper {
             { imageDataList },
             {
               signal,
-              timeout: 60000, // 60 second timeout
+              timeout: 300000, // 300 second timeout
               validateStatus: function (status) {
                 return status < 500 // Reject if the status code is >= 500
               },
@@ -302,7 +302,7 @@ export class ProcessingHelper {
         problemInfo,
         {
           signal,
-          timeout: 60000,
+          timeout: 300000,
           validateStatus: function (status) {
             return status < 500
           },
@@ -382,7 +382,7 @@ export class ProcessingHelper {
         { imageDataList, problemInfo },
         {
           signal,
-          timeout: 60000,
+          timeout: 300000,
           validateStatus: function (status) {
             return status < 500
           },
