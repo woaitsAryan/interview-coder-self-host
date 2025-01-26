@@ -1,9 +1,12 @@
-import { useUser } from "../hooks/useUser"
 import { useState, useRef, useEffect } from "react"
 import { supabase } from "../lib/supabase"
+import { User } from "@supabase/supabase-js"
 
-export default function SubscribePage() {
-  const { user } = useUser()
+interface SubscribePageProps {
+  user: User
+}
+
+export default function SubscribePage({ user }: SubscribePageProps) {
   const [error, setError] = useState<string | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 

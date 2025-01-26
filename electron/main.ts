@@ -1,67 +1,89 @@
-import { createClient } from "@supabase/supabase-js"
-import { app, BrowserWindow, shell } from "electron"
+import { app, BrowserWindow, screen, shell } from "electron"
+import path from "path"
 import { initializeIpcHandlers } from "./ipcHandlers"
 import { ProcessingHelper } from "./ProcessingHelper"
 import { ScreenshotHelper } from "./ScreenshotHelper"
 import { ShortcutsHelper } from "./shortcuts"
-import path from "path"
-import { WindowHelper } from "./WindowHelper"
 import { initAutoUpdater } from "./autoUpdater"
 import * as dotenv from "dotenv"
 
+// Constants
+const isDev = !app.isPackaged
+const MAX_RETRIES = 3
+const RETRY_DELAY = 1000 // 1 second
+const AUTH_PROTOCOL = "interview-coder"
+
+// Application State Class
 export class AppState {
   private static instance: AppState | null = null
+  // Window management properties
+  private mainWindow: BrowserWindow | null = null
+  private isWindowVisible: boolean = false
+  private windowPosition: { x: number; y: number } | null = null
+  private windowSize: { width: number; height: number } | null = null
+  private screenWidth: number = 0
+  private screenHeight: number = 0
+  private step: number = 0
+  private currentX: number = 0
+  private currentY: number = 0
 
-  private windowHelper: WindowHelper
+  // Application helpers
   private screenshotHelper: ScreenshotHelper
   public shortcutsHelper: ShortcutsHelper
   public processingHelper: ProcessingHelper
 
-  // View management
+  // View and state management
   private view: "queue" | "solutions" | "debug" = "queue"
-
-  private problemInfo: {
-    problem_statement: string
-    input_format: Record<string, any>
-    output_format: Record<string, any>
-    constraints: Array<Record<string, any>>
-    test_cases: Array<Record<string, any>>
-  } | null = null // Allow null
-
+  private problemInfo: any = null
   private hasDebugged: boolean = false
 
   // Processing events
   public readonly PROCESSING_EVENTS = {
-    //global states
-    UNAUTHORIZED: "procesing-unauthorized",
+    UNAUTHORIZED: "processing-unauthorized",
     NO_SCREENSHOTS: "processing-no-screenshots",
     API_KEY_OUT_OF_CREDITS: "processing-api-key-out-of-credits",
     API_KEY_INVALID: "processing-api-key-invalid",
-
-    //states for generating the initial solution
     INITIAL_START: "initial-start",
     PROBLEM_EXTRACTED: "problem-extracted",
     SOLUTION_SUCCESS: "solution-success",
     INITIAL_SOLUTION_ERROR: "solution-error",
-
-    //states for processing the debugging
     DEBUG_START: "debug-start",
     DEBUG_SUCCESS: "debug-success",
     DEBUG_ERROR: "debug-error"
   } as const
 
-  constructor() {
-    // Initialize WindowHelper with this
-    this.windowHelper = new WindowHelper(this)
-
-    // Initialize ScreenshotHelper
+  private constructor() {
+    // Initialize helpers
     this.screenshotHelper = new ScreenshotHelper(this.view)
-
-    // Initialize ProcessingHelper
     this.processingHelper = new ProcessingHelper(this)
-
-    // Initialize ShortcutsHelper
     this.shortcutsHelper = new ShortcutsHelper(this)
+  }
+
+  public async handleAuthCallback(url: string, win: BrowserWindow | null) {
+    try {
+      console.log("Auth callback received:", url)
+      const urlObj = new URL(url)
+      const code = urlObj.searchParams.get("code")
+
+      if (!code) {
+        console.error("Missing code in callback URL")
+        return
+      }
+
+      if (win) {
+        // Ensure window is visible and focused when handling auth callback
+        if (win.isMinimized()) win.restore()
+        win.show()
+        win.focus()
+
+        // Send the code to the renderer for PKCE exchange
+        win.webContents.send("auth-callback", { code })
+      } else {
+        console.error("No window available for auth callback")
+      }
+    } catch (error) {
+      console.error("Error handling auth callback:", error)
+    }
   }
 
   public static getInstance(): AppState {
@@ -71,24 +93,257 @@ export class AppState {
     return AppState.instance
   }
 
-  // Getters and Setters
-  public getMainWindow(): BrowserWindow | null {
-    return this.windowHelper.getMainWindow()
+  // Window management methods -------------------------------------------------
+  public createWindow(): void {
+    if (this.mainWindow) {
+      if (this.mainWindow.isMinimized()) this.mainWindow.restore()
+      this.mainWindow.focus()
+      return
+    }
+
+    const primaryDisplay = screen.getPrimaryDisplay()
+    const workArea = primaryDisplay.workAreaSize
+    this.screenWidth = workArea.width
+    this.screenHeight = workArea.height
+    this.step = Math.floor(this.screenWidth / 10)
+
+    const windowSettings: Electron.BrowserWindowConstructorOptions = {
+      height: 600,
+      x: this.currentX,
+      y: 0,
+      alwaysOnTop: true,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        preload: isDev
+          ? path.join(__dirname, "../dist-electron/preload.js")
+          : path.join(__dirname, "preload.js"),
+        scrollBounce: true
+      },
+      show: true,
+      frame: false,
+      transparent: true,
+      fullscreenable: false,
+      hasShadow: false,
+      backgroundColor: "#00000000",
+      focusable: true,
+      skipTaskbar: true,
+      type: "panel"
+    }
+
+    this.mainWindow = new BrowserWindow(windowSettings)
+
+    this.mainWindow.webContents.openDevTools()
+
+    // Configure window behavior
+    this.mainWindow.webContents.setZoomFactor(1)
+
+    // Open OAuth links in the browser instead of a new window
+    this.mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+      console.log("Attempting to open URL:", url)
+      if (url.includes("google.com") || url.includes("supabase.co")) {
+        shell.openExternal(url)
+        return { action: "deny" }
+      }
+      return { action: "allow" }
+    })
+
+    this.mainWindow.setContentProtection(true)
+
+    this.mainWindow.setHiddenInMissionControl(true)
+    this.mainWindow.setVisibleOnAllWorkspaces(true, {
+      visibleOnFullScreen: true
+    })
+
+    this.mainWindow.setAlwaysOnTop(true, "screen-saver", 1)
+
+    // Add window loading event handlers
+    this.mainWindow.webContents.on("did-finish-load", () => {
+      console.log("Window finished loading")
+    })
+
+    this.mainWindow.webContents.on(
+      "did-fail-load",
+      async (event, errorCode, errorDescription) => {
+        console.error("Window failed to load:", errorCode, errorDescription)
+        if (isDev) {
+          // In development, retry loading after a short delay
+          console.log("Retrying to load development server...")
+          await new Promise((resolve) => setTimeout(resolve, 1000))
+          this.mainWindow?.loadURL("http://localhost:54321").catch((error) => {
+            console.error("Failed to load dev server on retry:", error)
+          })
+        }
+      }
+    )
+
+    if (isDev) {
+      // In development, load from the dev server
+      this.mainWindow.loadURL("http://localhost:54321").catch((error) => {
+        console.error("Failed to load dev server:", error)
+      })
+    } else {
+      // In production, load from the built files
+      console.log(
+        "Loading production build:",
+        path.join(__dirname, "../dist/index.html")
+      )
+      this.mainWindow.loadFile(path.join(__dirname, "../dist/index.html"))
+    }
+
+    // Set up window listeners
+    this.mainWindow.on("move", () => this.handleWindowMove())
+    this.mainWindow.on("resize", () => this.handleWindowResize())
+    this.mainWindow.on("closed", () => this.handleWindowClosed())
+
+    // Initialize window state
+    const bounds = this.mainWindow.getBounds()
+    this.windowPosition = { x: bounds.x, y: bounds.y }
+    this.windowSize = { width: bounds.width, height: bounds.height }
+    this.currentX = bounds.x
+    this.currentY = bounds.y
+    this.isWindowVisible = true
   }
 
+  private handleWindowMove(): void {
+    if (!this.mainWindow) return
+    const bounds = this.mainWindow.getBounds()
+    this.windowPosition = { x: bounds.x, y: bounds.y }
+    this.currentX = bounds.x
+    this.currentY = bounds.y
+  }
+
+  private handleWindowResize(): void {
+    if (!this.mainWindow) return
+    const bounds = this.mainWindow.getBounds()
+    this.windowSize = { width: bounds.width, height: bounds.height }
+  }
+
+  private handleWindowClosed(): void {
+    this.mainWindow = null
+    this.isWindowVisible = false
+    this.windowPosition = null
+    this.windowSize = null
+  }
+
+  public getMainWindow(): BrowserWindow | null {
+    return this.mainWindow
+  }
+
+  public isVisible(): boolean {
+    return this.isWindowVisible
+  }
+
+  public hideMainWindow(): void {
+    if (!this.mainWindow?.isDestroyed()) {
+      const bounds = this.mainWindow.getBounds()
+      this.windowPosition = { x: bounds.x, y: bounds.y }
+      this.windowSize = { width: bounds.width, height: bounds.height }
+      this.mainWindow.setIgnoreMouseEvents(true, { forward: true })
+      this.mainWindow.setFocusable(false)
+      this.mainWindow.setOpacity(0)
+      this.mainWindow.hide()
+      this.isWindowVisible = false
+    }
+  }
+
+  public showMainWindow(): void {
+    if (!this.mainWindow?.isDestroyed()) {
+      if (this.windowPosition && this.windowSize) {
+        this.mainWindow.setBounds({
+          ...this.windowPosition,
+          ...this.windowSize
+        })
+      }
+      this.mainWindow.setIgnoreMouseEvents(false)
+      this.mainWindow.setFocusable(true)
+      this.mainWindow.setOpacity(0)
+      this.mainWindow.show()
+      this.mainWindow.setOpacity(1)
+      this.mainWindow.showInactive()
+      this.isWindowVisible = true
+    }
+  }
+
+  public toggleMainWindow(): void {
+    this.isWindowVisible ? this.hideMainWindow() : this.showMainWindow()
+  }
+
+  public setWindowDimensions(width: number, height: number): void {
+    if (!this.mainWindow?.isDestroyed()) {
+      const [currentX, currentY] = this.mainWindow.getPosition()
+      const primaryDisplay = screen.getPrimaryDisplay()
+      const workArea = primaryDisplay.workAreaSize
+      const maxWidth = Math.floor(
+        workArea.width * (this.hasDebugged ? 0.75 : 0.5)
+      )
+
+      this.mainWindow.setBounds({
+        x: Math.min(currentX, workArea.width - maxWidth),
+        y: currentY,
+        width: Math.min(width + 32, maxWidth),
+        height: Math.ceil(height)
+      })
+    }
+  }
+
+  // Window movement methods ---------------------------------------------------
+  public moveWindowRight(): void {
+    this.moveWindowHorizontal((x) =>
+      Math.min(
+        this.screenWidth - (this.windowSize?.width || 0) / 2,
+        x + this.step
+      )
+    )
+  }
+
+  public moveWindowLeft(): void {
+    this.moveWindowHorizontal((x) =>
+      Math.max(-(this.windowSize?.width || 0) / 2, x - this.step)
+    )
+  }
+
+  public moveWindowDown(): void {
+    this.moveWindowVertical((y) =>
+      Math.min(
+        this.screenHeight - (this.windowSize?.height || 0) / 2,
+        y + this.step
+      )
+    )
+  }
+
+  public moveWindowUp(): void {
+    this.moveWindowVertical((y) =>
+      Math.max(-(this.windowSize?.height || 0) / 2, y - this.step)
+    )
+  }
+
+  private moveWindowHorizontal(updateFn: (x: number) => number): void {
+    if (!this.mainWindow) return
+    this.currentX = updateFn(this.currentX)
+    this.mainWindow.setPosition(
+      Math.round(this.currentX),
+      Math.round(this.currentY)
+    )
+  }
+
+  private moveWindowVertical(updateFn: (y: number) => number): void {
+    if (!this.mainWindow) return
+    this.currentY = updateFn(this.currentY)
+    this.mainWindow.setPosition(
+      Math.round(this.currentX),
+      Math.round(this.currentY)
+    )
+  }
+
+  // Application state management ----------------------------------------------
   public getView(): "queue" | "solutions" | "debug" {
     return this.view
   }
 
   public setView(view: "queue" | "solutions" | "debug"): void {
-    // Set view state before updating screenshot helper
     this.view = view
-    // Update screenshot helper's view state
     this.screenshotHelper.setView(view)
-  }
-
-  public isVisible(): boolean {
-    return this.windowHelper.isVisible()
   }
 
   public getScreenshotHelper(): ScreenshotHelper {
@@ -111,47 +366,18 @@ export class AppState {
     return this.screenshotHelper.getExtraScreenshotQueue()
   }
 
-  // Window management methods
-  public createWindow(): void {
-    this.windowHelper.createWindow()
-  }
-
-  public hideMainWindow(): void {
-    this.windowHelper.hideMainWindow()
-  }
-
-  public showMainWindow(): void {
-    this.windowHelper.showMainWindow()
-  }
-
-  public toggleMainWindow(): void {
-    this.windowHelper.toggleMainWindow()
-  }
-
-  public setWindowDimensions(width: number, height: number): void {
-    this.windowHelper.setWindowDimensions(width, height)
-  }
-
   public clearQueues(): void {
     this.screenshotHelper.clearQueues()
-
-    // Clear problem info
     this.problemInfo = null
-
-    // Reset view to initial state
     this.setView("queue")
   }
 
-  // Screenshot management methods
   public async takeScreenshot(): Promise<string> {
-    if (!this.getMainWindow()) throw new Error("No main window available")
-
-    const screenshotPath = await this.screenshotHelper.takeScreenshot(
+    if (!this.mainWindow) throw new Error("No main window available")
+    return this.screenshotHelper.takeScreenshot(
       () => this.hideMainWindow(),
       () => this.showMainWindow()
     )
-
-    return screenshotPath
   }
 
   public async getImagePreview(filepath: string): Promise<string> {
@@ -164,21 +390,6 @@ export class AppState {
     return this.screenshotHelper.deleteScreenshot(path)
   }
 
-  // New methods to move the window
-  public moveWindowLeft(): void {
-    this.windowHelper.moveWindowLeft()
-  }
-
-  public moveWindowRight(): void {
-    this.windowHelper.moveWindowRight()
-  }
-  public moveWindowDown(): void {
-    this.windowHelper.moveWindowDown()
-  }
-  public moveWindowUp(): void {
-    this.windowHelper.moveWindowUp()
-  }
-
   public setHasDebugged(value: boolean): void {
     this.hasDebugged = value
   }
@@ -188,36 +399,38 @@ export class AppState {
   }
 }
 
-// Single Instance Lock
-const gotTheLock = app.requestSingleInstanceLock()
-
-if (!gotTheLock) {
+// Single Instance Lock and App Lifecycle Management
+if (!app.requestSingleInstanceLock()) {
   app.quit()
 } else {
   app.on("second-instance", (event, commandLine, workingDirectory) => {
-    // Someone tried to run a second instance, we should focus our window.
-    if (AppState.getInstance().getMainWindow()) {
-      const win = AppState.getInstance().getMainWindow()
-      if (win.isMinimized()) win.restore()
-      win.focus()
+    const url = commandLine.find((arg) => arg.startsWith(`${AUTH_PROTOCOL}://`))
+    if (url) {
+      AppState.getInstance().handleAuthCallback(
+        url,
+        AppState.getInstance().getMainWindow()
+      )
+    }
+
+    const mainWindow = AppState.getInstance().getMainWindow()
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore()
+      mainWindow.focus()
     }
   })
 
-  const isDev = !app.isPackaged
+  // Function to load environment variables
   function loadEnvVariables() {
-    // In development, load from project root
     if (isDev) {
       dotenv.config({ path: path.join(process.cwd(), ".env") })
     } else {
-      // In production, load from the app's resources directory
-      dotenv.config({
-        path: path.join(process.resourcesPath, ".env")
-      })
+      dotenv.config({ path: path.join(process.resourcesPath, ".env") })
     }
   }
+
   loadEnvVariables()
 
-  // Register protocol handler
+  // Register the interview-coder protocol
   if (process.platform === "darwin") {
     app.setAsDefaultProtocolClient("interview-coder")
   } else {
@@ -225,132 +438,58 @@ if (!gotTheLock) {
       path.resolve(process.argv[1] || "")
     ])
   }
-
   // Handle the protocol. In this case, we choose to show an Error Box.
-  app.on("open-url", (event, url) => {
-    event.preventDefault()
-    handleAuthCallback(url)
-  })
-
-  // Handle auth callback
-  async function handleAuthCallback(url: string) {
-    try {
-      console.log("Auth callback received:", url)
-      const urlObj = new URL(url)
-      const code = urlObj.searchParams.get("code")
-
-      if (!code) {
-        console.error("Missing code in callback URL")
-        return
-      }
-
-      const mainWindow = BrowserWindow.getAllWindows()[0]
-      if (mainWindow) {
-        if (isDev) {
-          // In dev, exchange the code for tokens in the main process
-          const { createClient } = await import("@supabase/supabase-js")
-          const supabase = createClient(
-            process.env.VITE_SUPABASE_URL!,
-            process.env.VITE_SUPABASE_ANON_KEY!
-          )
-          const { data, error } = await supabase.auth.exchangeCodeForSession(
-            code
-          )
-          if (error) {
-            console.error("Dev main exchange error:", error)
-            return
-          }
-          if (data?.session) {
-            mainWindow.webContents.send("auth-callback", {
-              accessToken: data.session.access_token,
-              refreshToken: data.session.refresh_token
-            })
-          }
-        } else {
-          // In production, send the code to the renderer
-          mainWindow.webContents.send("auth-callback", { code })
-        }
-      }
-    } catch (error) {
-      console.error("Error handling auth callback:", error)
-    }
+  if (process.defaultApp && process.argv.length >= 2) {
+    app.setAsDefaultProtocolClient("interview-coder", process.execPath, [
+      path.resolve(process.argv[1])
+    ])
   }
-
-  // Handle the protocol for Windows
-  if (process.defaultApp) {
-    if (process.argv.length >= 2) {
-      app.setAsDefaultProtocolClient("interview-coder", process.execPath, [
-        path.resolve(process.argv[1])
-      ])
-    }
-  } else {
-    app.setAsDefaultProtocolClient("interview-coder")
-  }
-
-  // Handle the protocol callback in Windows
-  app.on("second-instance", (event, commandLine) => {
-    const mainWindow = BrowserWindow.getAllWindows()[0]
-    if (mainWindow) {
-      if (mainWindow.isMinimized()) mainWindow.restore()
-      mainWindow.focus()
-    }
-
-    // Look for the custom protocol url
-    const url = commandLine.find((arg) => arg.startsWith("interview-coder://"))
-    if (url) {
-      handleAuthCallback(url)
-    }
-  })
 
   // Application initialization
-  async function initializeApp() {
+  app.whenReady().then(async () => {
+    try {
+      loadEnvVariables()
+    } catch (error) {
+      console.error("Failed to load environment variables:", error)
+      app.quit()
+      return
+    }
+
     const appState = AppState.getInstance()
-
-    // Initialize IPC handlers before window creation
     initializeIpcHandlers(appState)
+    appState.createWindow()
+    appState.shortcutsHelper.registerGlobalShortcuts()
 
-    app.whenReady().then(() => {
-      // Load environment variables now that app is ready
-      try {
-        loadEnvVariables()
-      } catch (error) {
-        console.error("Failed to load environment variables:", error)
-        app.quit()
-        return
-      }
+    if (app.isPackaged) {
+      initAutoUpdater()
+    } else {
+      console.log("Running in development mode - auto-updater disabled")
+    }
+  })
 
-      appState.createWindow()
-      // Register global shortcuts using ShortcutsHelper
-      appState.shortcutsHelper.registerGlobalShortcuts()
+  // Handle window-all-closed event
+  app.on("window-all-closed", () => {
+    if (process.platform !== "darwin") {
+      app.quit()
+    }
+  })
 
-      // Initialize auto-updater in production
-      if (app.isPackaged) {
-        initAutoUpdater()
-      } else {
-        console.log("Running in development mode - auto-updater disabled")
-      }
-    })
+  // Handle activation (macOS)
+  app.on("activate", () => {
+    if (BrowserWindow.getAllWindows().length === 0) {
+      AppState.getInstance().createWindow()
+    }
+  })
 
-    app.on("activate", () => {
-      if (appState.getMainWindow() === null) {
-        appState.createWindow()
-      }
-    })
-
-    // Quit when all windows are closed, except on macOS
-    app.on("window-all-closed", () => {
-      if (process.platform !== "darwin") {
-        app.quit()
-      }
-    })
-
-    app.dock?.hide() // Hide dock icon (optional)
-    app.commandLine.appendSwitch("disable-background-timer-throttling")
-
-    console.log("Preload script path:", path.join(__dirname, "preload.js"))
-    console.log("__dirname:", __dirname)
-  }
-
-  // Start the application (only once)
-  initializeApp().catch(console.error)
+  // Handle the auth callback via custom protocol (macOS)
+  app.on("open-url", (event, url) => {
+    console.log("open-url event received:", url)
+    event.preventDefault()
+    if (url.startsWith(`${AUTH_PROTOCOL}://`)) {
+      AppState.getInstance().handleAuthCallback(
+        url,
+        AppState.getInstance().getMainWindow()
+      )
+    }
+  })
 }
