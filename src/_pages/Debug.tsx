@@ -22,130 +22,42 @@ type DiffLine = {
   removed?: boolean
 }
 
-const CodeComparisonSection = ({
-  oldCode,
-  newCode,
+const CodeSection = ({
+  code,
   isLoading
 }: {
-  oldCode: string | null
-  newCode: string | null
+  code: string | null
   isLoading: boolean
 }) => {
-  const computeDiff = () => {
-    if (!oldCode || !newCode) return { leftLines: [], rightLines: [] }
-
-    // Normalize line endings and clean up the code
-    const normalizeCode = (code: string) => {
-      return code
-        .replace(/\r\n/g, "\n") // Convert Windows line endings to Unix
-        .replace(/\r/g, "\n") // Convert remaining carriage returns
-        .split("\n") // Split into lines
-        .map((line) => line.trimRight()) // Remove trailing whitespace from each line
-        .join("\n") // Rejoin with Unix line endings
-    }
-
-    const normalizedOldCode = normalizeCode(oldCode)
-    const normalizedNewCode = normalizeCode(newCode)
-
-    // Generate the diff
-    const diff = diffLines(normalizedOldCode, normalizedNewCode, {
-      newlineIsToken: true,
-      ignoreWhitespace: false // Changed to false to preserve intended whitespace
-    })
-
-    // Process the diff to create parallel arrays
-    const leftLines: DiffLine[] = []
-    const rightLines: DiffLine[] = []
-
-    diff.forEach((part) => {
-      if (part.added) {
-        // Add empty lines to left side
-        const lines = part.value.split("\n")
-        if (lines[lines.length - 1] === "") lines.pop() // Remove trailing empty line
-        leftLines.push(...Array(lines.length).fill({ value: "" }))
-        // Add new lines to right side
-        rightLines.push(
-          ...lines.map((line) => ({
-            value: line,
-            added: true
-          }))
-        )
-      } else if (part.removed) {
-        // Add removed lines to left side
-        const lines = part.value.split("\n")
-        if (lines[lines.length - 1] === "") lines.pop() // Remove trailing empty line
-        leftLines.push(
-          ...lines.map((line) => ({
-            value: line,
-            removed: true
-          }))
-        )
-        // Add empty lines to right side
-        rightLines.push(...Array(lines.length).fill({ value: "" }))
-      } else {
-        // Add unchanged lines to both sides
-        const lines = part.value.split("\n")
-        if (lines[lines.length - 1] === "") lines.pop() // Remove trailing empty line
-        leftLines.push(...lines.map((line) => ({ value: line })))
-        rightLines.push(...lines.map((line) => ({ value: line })))
-      }
-    })
-
-    return { leftLines, rightLines }
-  }
-
-  const { leftLines, rightLines } = computeDiff()
-
   return (
     <div className="space-y-1.5">
-      <h2 className="text-[13px] font-medium text-white tracking-wide">
-        Code Comparison
-      </h2>
+      <h2 className="text-[13px] font-medium text-white tracking-wide">Code</h2>
       {isLoading ? (
         <div className="space-y-1">
           <div className="mt-3 flex">
             <p className="text-xs bg-gradient-to-r from-gray-300 via-gray-100 to-gray-300 bg-clip-text text-transparent animate-pulse">
-              Loading code comparison...
+              Loading code...
             </p>
           </div>
         </div>
       ) : (
-        <div className="flex flex-row gap-0.5 bg-[#161b22] rounded-lg overflow-hidden">
-          {/* New Code */}
-          <div className="w-full">
-            <div className="bg-[#2d333b] px-3 py-1.5">
-              <h3 className="text-[11px] font-medium text-gray-200">
-                New Version
-              </h3>
-            </div>
-            <div className="p-3 overflow-x-auto">
-              <SyntaxHighlighter
-                language="python"
-                style={dracula}
-                customStyle={{
-                  maxWidth: "100%",
-                  margin: 0,
-                  padding: "1rem",
-                  whiteSpace: "pre-wrap",
-                  wordBreak: "break-all"
-                }}
-                wrapLines={true}
-                showLineNumbers={true}
-                lineProps={(lineNumber) => {
-                  const line = rightLines[lineNumber - 1]
-                  return {
-                    style: {
-                      display: "block",
-                      backgroundColor: line?.added
-                        ? "rgba(0, 139, 0, 0.2)"
-                        : "transparent"
-                    }
-                  }
-                }}
-              >
-                {rightLines.map((line) => line.value).join("\n")}
-              </SyntaxHighlighter>
-            </div>
+        <div className="bg-[#161b22] rounded-lg overflow-hidden">
+          <div className="p-3 overflow-x-auto">
+            <SyntaxHighlighter
+              language="python"
+              style={dracula}
+              customStyle={{
+                maxWidth: "100%",
+                margin: 0,
+                padding: "1rem",
+                background: "#161b22",
+                borderRadius: "0.5rem"
+              }}
+              wrapLines={true}
+              showLineNumbers={true}
+            >
+              {code || ""}
+            </SyntaxHighlighter>
           </div>
         </div>
       )}
@@ -230,7 +142,6 @@ const Debug: React.FC<DebugProps> = ({ isProcessing, setIsProcessing }) => {
   useEffect(() => {
     // Try to get the new solution data from cache first
     const newSolution = queryClient.getQueryData(["new_solution"]) as {
-      old_code: string
       new_code: string
       thoughts: string[]
       time_complexity: string
@@ -239,7 +150,6 @@ const Debug: React.FC<DebugProps> = ({ isProcessing, setIsProcessing }) => {
 
     // If we have cached data, set all state variables to the cached data
     if (newSolution) {
-      setOldCode(newSolution.old_code || null)
       setNewCode(newSolution.new_code || null)
       setThoughtsData(newSolution.thoughts || null)
       setTimeComplexityData(newSolution.time_complexity || null)
@@ -301,7 +211,7 @@ const Debug: React.FC<DebugProps> = ({ isProcessing, setIsProcessing }) => {
   }
 
   return (
-    <div ref={contentRef} className="relative space-y-3 px-4 py-3 ">
+    <div ref={contentRef} className="relative space-y-3 px-4 py-3">
       <Toast
         open={toastOpen}
         onOpenChange={setToastOpen}
@@ -356,12 +266,8 @@ const Debug: React.FC<DebugProps> = ({ isProcessing, setIsProcessing }) => {
               isLoading={!thoughtsData}
             />
 
-            {/* Code Comparison Section */}
-            <CodeComparisonSection
-              oldCode={oldCode}
-              newCode={newCode}
-              isLoading={!oldCode || !newCode}
-            />
+            {/* Code Section */}
+            <CodeSection code={newCode} isLoading={!newCode} />
 
             {/* Complexity Section */}
             <ComplexitySection
