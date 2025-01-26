@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query"
 import ScreenshotQueue from "../components/Queue/ScreenshotQueue"
 import QueueCommands from "../components/Queue/QueueCommands"
 
-import { useToast } from "./SubscribedApp"
+import { useToast } from "../contexts/toast"
 import { Screenshot } from "../types/screenshots"
 
 async function fetchScreenshots(): Promise<Screenshot[]> {

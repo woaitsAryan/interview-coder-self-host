@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react"
 import { Dialog, DialogContent, DialogTrigger } from "./ui/dialog"
 import { Button } from "./ui/button"
-import { useToast } from "../_pages/SubscribedApp"
+import { useToast } from "../contexts/toast"
 
 export const UpdateNotification: React.FC = () => {
   const [updateAvailable, setUpdateAvailable] = useState(false)

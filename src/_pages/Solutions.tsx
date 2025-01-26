@@ -9,7 +9,7 @@ import ScreenshotQueue from "../components/Queue/ScreenshotQueue"
 import { ProblemStatementData } from "../types/solutions"
 import SolutionCommands from "../components/Solutions/SolutionCommands"
 import Debug from "./Debug"
-import { useToast } from "./SubscribedApp"
+import { useToast } from "../contexts/toast"
 
 export const ContentSection = ({
   title,

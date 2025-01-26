@@ -1,6 +1,8 @@
 interface Window {
   electronAPI: {
     ipcRenderer?: {
+      onUpdateAvailable: (callback: (info: any) => void) => () => void
+      onUpdateDownloaded: (callback: (info: any) => void) => () => void
       on: (channel: string, func: (...args: any[]) => void) => void
       removeListener: (channel: string, func: (...args: any[]) => void) => void
     }

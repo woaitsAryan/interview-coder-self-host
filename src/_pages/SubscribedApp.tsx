@@ -1,56 +1,15 @@
 // file: src/components/SubscribedApp.tsx
-import { ToastViewport } from "@radix-ui/react-toast"
 import { useQueryClient } from "@tanstack/react-query"
-import { createContext, useContext, useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import Queue from "../_pages/Queue"
 import Solutions from "../_pages/Solutions"
-import {
-  Toast,
-  ToastDescription,
-  ToastMessage,
-  ToastProvider,
-  ToastTitle,
-  ToastVariant
-} from "../components/ui/toast"
-
-// ToastContext setup
-interface ToastContextType {
-  showToast: (title: string, description: string, variant: ToastVariant) => void
-}
-
-export const ToastContext = createContext<ToastContextType | undefined>(
-  undefined
-)
-
-export function useToast() {
-  const context = useContext(ToastContext)
-  if (!context) {
-    throw new Error("useToast must be used within a ToastProvider")
-  }
-  return context
-}
+import { useToast } from "../contexts/toast"
 
 const SubscribedApp: React.FC = () => {
   const queryClient = useQueryClient()
   const [view, setView] = useState<"queue" | "solutions" | "debug">("queue")
   const containerRef = useRef<HTMLDivElement>(null)
-
-  const [toastOpen, setToastOpen] = useState(false)
-  const [toastMessage, setToastMessage] = useState<ToastMessage>({
-    title: "",
-    description: "",
-    variant: "neutral"
-  })
-
-  // Show toast method
-  const showToast = (
-    title: string,
-    description: string,
-    variant: ToastVariant
-  ) => {
-    setToastMessage({ title, description, variant })
-    setToastOpen(true)
-  }
+  const { showToast } = useToast()
 
   // Let's ensure we reset queries etc. if some electron signals happen
   useEffect(() => {
@@ -157,27 +116,11 @@ const SubscribedApp: React.FC = () => {
 
   return (
     <div ref={containerRef} className="min-h-0">
-      <ToastProvider>
-        <ToastContext.Provider value={{ showToast }}>
-          {view === "queue" ? (
-            <Queue setView={setView} />
-          ) : view === "solutions" ? (
-            <Solutions setView={setView} />
-          ) : null}
-        </ToastContext.Provider>
-
-        <Toast
-          open={toastOpen}
-          onOpenChange={setToastOpen}
-          variant={toastMessage.variant}
-          duration={3000}
-        >
-          <ToastTitle>{toastMessage.title}</ToastTitle>
-          <ToastDescription>{toastMessage.description}</ToastDescription>
-        </Toast>
-
-        <ToastViewport />
-      </ToastProvider>
+      {view === "queue" ? (
+        <Queue setView={setView} />
+      ) : view === "solutions" ? (
+        <Solutions setView={setView} />
+      ) : null}
     </div>
   )
 }

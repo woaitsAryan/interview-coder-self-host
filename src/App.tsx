@@ -9,6 +9,16 @@ import {
 } from "@tanstack/react-query"
 import { useEffect, useState } from "react"
 import { User } from "@supabase/supabase-js"
+import {
+  Toast,
+  ToastDescription,
+  ToastMessage,
+  ToastProvider,
+  ToastTitle,
+  ToastVariant,
+  ToastViewport
+} from "./components/ui/toast"
+import { ToastContext } from "./contexts/toast"
 
 declare global {
   interface Window {
@@ -38,6 +48,81 @@ const queryClient = new QueryClient({
     }
   }
 })
+
+// Root component that provides the QueryClient
+function App() {
+  const [toastOpen, setToastOpen] = useState(false)
+  const [toastMessage, setToastMessage] = useState<ToastMessage>({
+    title: "",
+    description: "",
+    variant: "neutral"
+  })
+
+  // Show toast method
+  const showToast = (
+    title: string,
+    description: string,
+    variant: ToastVariant
+  ) => {
+    setToastMessage({ title, description, variant })
+    setToastOpen(true)
+  }
+
+  // Listen for PKCE code callback
+  useEffect(() => {
+    if (!import.meta.env.DEV) {
+      const handleAuthCallbackPKCE = async (data: { code: string }) => {
+        console.log("Production IPC: received code:", data)
+        try {
+          const { code } = data || {}
+          if (!code) {
+            console.error("No code in callback data")
+            return
+          }
+          const { error } = await supabase.auth.exchangeCodeForSession(code)
+          if (error) {
+            console.error("Error exchanging code for session:", error)
+          } else {
+            console.log("Production PKCE: Session exchanged successfully")
+          }
+        } catch (err) {
+          console.error("Production PKCE: Error in auth callback:", err)
+        }
+      }
+
+      console.log("PROD: Setting up PKCE-based IPC listener")
+      window.electron?.ipcRenderer?.on("auth-callback", handleAuthCallbackPKCE)
+
+      return () => {
+        window.electron?.ipcRenderer?.removeListener(
+          "auth-callback",
+          handleAuthCallbackPKCE
+        )
+      }
+    }
+  }, [])
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ToastProvider>
+        <ToastContext.Provider value={{ showToast }}>
+          <AppContent />
+          <UpdateNotification />
+          <Toast
+            open={toastOpen}
+            onOpenChange={setToastOpen}
+            variant={toastMessage.variant}
+            duration={3000}
+          >
+            <ToastTitle>{toastMessage.title}</ToastTitle>
+            <ToastDescription>{toastMessage.description}</ToastDescription>
+          </Toast>
+          <ToastViewport />
+        </ToastContext.Provider>
+      </ToastProvider>
+    </QueryClientProvider>
+  )
+}
 
 function AuthForm() {
   const [isLoading, setIsLoading] = useState(false)
@@ -420,50 +505,6 @@ function AppContent() {
 
   // If logged in and subscribed, show the app
   return <SubscribedApp />
-}
-
-// Root component that provides the QueryClient
-function App() {
-  // Listen for PKCE code callback
-  useEffect(() => {
-    if (!import.meta.env.DEV) {
-      const handleAuthCallbackPKCE = async (data: { code: string }) => {
-        console.log("Production IPC: received code:", data)
-        try {
-          const { code } = data || {}
-          if (!code) {
-            console.error("No code in callback data")
-            return
-          }
-          const { error } = await supabase.auth.exchangeCodeForSession(code)
-          if (error) {
-            console.error("Error exchanging code for session:", error)
-          } else {
-            console.log("Production PKCE: Session exchanged successfully")
-          }
-        } catch (err) {
-          console.error("Production PKCE: Error in auth callback:", err)
-        }
-      }
-
-      console.log("PROD: Setting up PKCE-based IPC listener")
-      window.electron?.ipcRenderer?.on("auth-callback", handleAuthCallbackPKCE)
-
-      return () => {
-        window.electron?.ipcRenderer?.removeListener(
-          "auth-callback",
-          handleAuthCallbackPKCE
-        )
-      }
-    }
-  }, [])
-
-  return (
-    <QueryClientProvider client={queryClient}>
-      <AppContent />
-      <UpdateNotification />
-    </QueryClientProvider>
-  )
 }
 
 export default App

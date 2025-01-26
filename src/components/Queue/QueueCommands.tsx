@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react"
-import { useToast } from "../../_pages/SubscribedApp"
+
 import { supabase } from "../../lib/supabase"
+import { useToast } from "../../contexts/toast"
 
 interface QueueCommandsProps {
   onTooltipVisibilityChange: (visible: boolean, height: number) => void

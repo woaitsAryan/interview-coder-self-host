@@ -1,6 +1,6 @@
 {
   "name": "interview-coder-v1",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "main": "dist-electron/main.js",
   "scripts": {
     "clean": "rimraf dist dist-electron",
@@ -77,7 +77,9 @@
     "publish": {
       "provider": "github",
       "owner": "ibttf",
-      "repo": "interview-coder-v1"
+      "repo": "interview-coder-v1",
+      "private": true,
+      "token": "process.env.GH_TOKEN"
     },
     "extraResources": [
       {

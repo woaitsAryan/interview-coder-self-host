@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react"
-import { useToast } from "../../_pages/SubscribedApp"
+import { useToast } from "../../contexts/toast"
 import { Screenshot } from "../../types/screenshots"
 import { supabase } from "../../lib/supabase"
 
