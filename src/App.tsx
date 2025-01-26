@@ -9,6 +9,20 @@ import {
 import { useEffect, useState } from "react"
 import { User } from "@supabase/supabase-js"
 
+declare global {
+  interface Window {
+    electron: {
+      ipcRenderer: {
+        on: (channel: string, func: (...args: any[]) => void) => void
+        removeListener: (
+          channel: string,
+          func: (...args: any[]) => void
+        ) => void
+      }
+    }
+  }
+}
+
 // Create a React Query client
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -122,6 +136,7 @@ function AuthForm() {
   async function handleGoogleAuth() {
     setIsLoading(true)
     setError("")
+    console.log("isdev", import.meta.env.DEV)
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
@@ -420,13 +435,10 @@ function App() {
       }
 
       console.log("PROD: Setting up PKCE-based IPC listener")
-      window.electronAPI?.ipcRenderer?.on(
-        "auth-callback",
-        handleAuthCallbackPKCE
-      )
+      window.electron?.ipcRenderer?.on("auth-callback", handleAuthCallbackPKCE)
 
       return () => {
-        window.electronAPI?.ipcRenderer?.removeListener(
+        window.electron?.ipcRenderer?.removeListener(
           "auth-callback",
           handleAuthCallbackPKCE
         )

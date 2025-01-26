@@ -1,48 +1,45 @@
 // ProcessingHelper.ts
 import fs from "node:fs"
 import { ScreenshotHelper } from "./ScreenshotHelper"
-import { AppState } from "./main"
+import { IProcessingHelperDeps } from "./main"
 import axios from "axios"
+import { app } from "electron"
 
-const API_BASE_URL =
-  process.env.NODE_ENV === "development"
-    ? "http://localhost:3000"
-    : "https://www.interviewcoder.co"
+const isDev = !app.isPackaged
+const API_BASE_URL = isDev
+  ? "http://localhost:3000"
+  : "https://www.interviewcoder.co"
 
 export class ProcessingHelper {
-  private appState: AppState
+  private deps: IProcessingHelperDeps
   private screenshotHelper: ScreenshotHelper
 
   // AbortControllers for API requests
   private currentProcessingAbortController: AbortController | null = null
   private currentExtraProcessingAbortController: AbortController | null = null
 
-  constructor(appState: AppState) {
-    this.appState = appState
-    this.screenshotHelper = appState.getScreenshotHelper()
+  constructor(deps: IProcessingHelperDeps) {
+    this.deps = deps
+    this.screenshotHelper = deps.getScreenshotHelper()
   }
 
   public async processScreenshots(): Promise<void> {
-    const mainWindow = this.appState.getMainWindow()
+    const mainWindow = this.deps.getMainWindow()
     if (!mainWindow) return
 
-    const view = this.appState.getView()
+    const view = this.deps.getView()
     console.log("Processing screenshots in view:", view)
 
     if (view === "queue") {
       const screenshotQueue = this.screenshotHelper.getScreenshotQueue()
       console.log("Processing main queue screenshots:", screenshotQueue)
       if (screenshotQueue.length === 0) {
-        mainWindow.webContents.send(
-          this.appState.PROCESSING_EVENTS.NO_SCREENSHOTS
-        )
+        mainWindow.webContents.send(this.deps.PROCESSING_EVENTS.NO_SCREENSHOTS)
         return
       }
 
       try {
-        mainWindow.webContents.send(
-          this.appState.PROCESSING_EVENTS.INITIAL_START
-        )
+        mainWindow.webContents.send(this.deps.PROCESSING_EVENTS.INITIAL_START)
 
         // Initialize AbortController
         this.currentProcessingAbortController = new AbortController()
@@ -62,48 +59,48 @@ export class ProcessingHelper {
           console.log("Processing failed:", result.error)
           if (result.error?.includes("API Key out of credits")) {
             mainWindow.webContents.send(
-              this.appState.PROCESSING_EVENTS.API_KEY_OUT_OF_CREDITS
+              this.deps.PROCESSING_EVENTS.API_KEY_OUT_OF_CREDITS
             )
           } else if (result.error?.includes("OpenAI API key not found")) {
             mainWindow.webContents.send(
-              this.appState.PROCESSING_EVENTS.INITIAL_SOLUTION_ERROR,
+              this.deps.PROCESSING_EVENTS.INITIAL_SOLUTION_ERROR,
               "OpenAI API key not found in environment variables. Please set the OPEN_AI_API_KEY environment variable."
             )
           } else {
             mainWindow.webContents.send(
-              this.appState.PROCESSING_EVENTS.INITIAL_SOLUTION_ERROR,
+              this.deps.PROCESSING_EVENTS.INITIAL_SOLUTION_ERROR,
               result.error
             )
           }
           // Reset view back to queue on error
           console.log("Resetting view to queue due to error")
-          this.appState.setView("queue")
+          this.deps.setView("queue")
           return
         }
 
         // Only set view to solutions if processing succeeded
         console.log("Setting view to solutions after successful processing")
         mainWindow.webContents.send(
-          this.appState.PROCESSING_EVENTS.SOLUTION_SUCCESS,
+          this.deps.PROCESSING_EVENTS.SOLUTION_SUCCESS,
           result.data
         )
-        this.appState.setView("solutions")
+        this.deps.setView("solutions")
       } catch (error: any) {
         console.error("Processing error:", error)
         if (axios.isCancel(error)) {
           mainWindow.webContents.send(
-            this.appState.PROCESSING_EVENTS.INITIAL_SOLUTION_ERROR,
+            this.deps.PROCESSING_EVENTS.INITIAL_SOLUTION_ERROR,
             "Processing was canceled by the user."
           )
         } else {
           mainWindow.webContents.send(
-            this.appState.PROCESSING_EVENTS.INITIAL_SOLUTION_ERROR,
+            this.deps.PROCESSING_EVENTS.INITIAL_SOLUTION_ERROR,
             error.message || "An unknown error occurred"
           )
         }
         // Reset view back to queue on error
         console.log("Resetting view to queue due to error")
-        this.appState.setView("queue")
+        this.deps.setView("queue")
       } finally {
         this.currentProcessingAbortController = null
       }
@@ -113,12 +110,10 @@ export class ProcessingHelper {
         this.screenshotHelper.getExtraScreenshotQueue()
       console.log("Processing extra queue screenshots:", extraScreenshotQueue)
       if (extraScreenshotQueue.length === 0) {
-        mainWindow.webContents.send(
-          this.appState.PROCESSING_EVENTS.NO_SCREENSHOTS
-        )
+        mainWindow.webContents.send(this.deps.PROCESSING_EVENTS.NO_SCREENSHOTS)
         return
       }
-      mainWindow.webContents.send(this.appState.PROCESSING_EVENTS.DEBUG_START)
+      mainWindow.webContents.send(this.deps.PROCESSING_EVENTS.DEBUG_START)
 
       // Initialize AbortController
       this.currentExtraProcessingAbortController = new AbortController()
@@ -146,26 +141,26 @@ export class ProcessingHelper {
         )
 
         if (result.success) {
-          this.appState.setHasDebugged(true)
+          this.deps.setHasDebugged(true)
           mainWindow.webContents.send(
-            this.appState.PROCESSING_EVENTS.DEBUG_SUCCESS,
+            this.deps.PROCESSING_EVENTS.DEBUG_SUCCESS,
             result.data
           )
         } else {
           mainWindow.webContents.send(
-            this.appState.PROCESSING_EVENTS.DEBUG_ERROR,
+            this.deps.PROCESSING_EVENTS.DEBUG_ERROR,
             result.error
           )
         }
       } catch (error: any) {
         if (axios.isCancel(error)) {
           mainWindow.webContents.send(
-            this.appState.PROCESSING_EVENTS.DEBUG_ERROR,
+            this.deps.PROCESSING_EVENTS.DEBUG_ERROR,
             "Extra processing was canceled by the user."
           )
         } else {
           mainWindow.webContents.send(
-            this.appState.PROCESSING_EVENTS.DEBUG_ERROR,
+            this.deps.PROCESSING_EVENTS.DEBUG_ERROR,
             error.message
           )
         }
@@ -185,7 +180,7 @@ export class ProcessingHelper {
     while (retryCount <= MAX_RETRIES) {
       try {
         const imageDataList = screenshots.map((screenshot) => screenshot.data)
-        const mainWindow = this.appState.getMainWindow()
+        const mainWindow = this.deps.getMainWindow()
         let problemInfo
 
         // First API call - extract problem info
@@ -209,12 +204,12 @@ export class ProcessingHelper {
           problemInfo = extractResponse.data
 
           // Store problem info in AppState
-          this.appState.setProblemInfo(problemInfo)
+          this.deps.setProblemInfo(problemInfo)
 
           // Send first success event
           if (mainWindow) {
             mainWindow.webContents.send(
-              this.appState.PROCESSING_EVENTS.PROBLEM_EXTRACTED,
+              this.deps.PROCESSING_EVENTS.PROBLEM_EXTRACTED,
               problemInfo
             )
 
@@ -224,7 +219,7 @@ export class ProcessingHelper {
               // Clear any existing extra screenshots before transitioning to solutions view
               this.screenshotHelper.clearExtraScreenshotQueue()
               mainWindow.webContents.send(
-                this.appState.PROCESSING_EVENTS.SOLUTION_SUCCESS,
+                this.deps.PROCESSING_EVENTS.SOLUTION_SUCCESS,
                 solutionsResult.data
               )
               return { success: true, data: solutionsResult.data }
@@ -235,68 +230,20 @@ export class ProcessingHelper {
             }
           }
         } catch (error: any) {
+          // If the request was cancelled, don't retry
+          if (axios.isCancel(error)) {
+            return {
+              success: false,
+              error: "Processing was canceled by the user."
+            }
+          }
+
           console.error("API Error Details:", {
             status: error.response?.status,
             data: error.response?.data,
             message: error.message,
             code: error.code
           })
-
-          // Network errors that might benefit from retry
-          if (
-            error.code === "ECONNRESET" ||
-            error.code === "ECONNABORTED" ||
-            error.message === "socket hang up" ||
-            error.message.includes("network") ||
-            error.response?.status >= 500
-          ) {
-            if (retryCount < MAX_RETRIES) {
-              console.log(
-                `Retrying request (attempt ${retryCount + 1} of ${MAX_RETRIES})`
-              )
-              retryCount++
-              // Wait before retrying (exponential backoff)
-              await new Promise((resolve) =>
-                setTimeout(resolve, 1000 * Math.pow(2, retryCount))
-              )
-              continue
-            }
-          }
-
-          // Handle different types of server errors
-          if (error.response?.status) {
-            switch (error.response.status) {
-              case 500:
-                throw new Error(
-                  "Server error occurred. Please try again in a few moments."
-                )
-              case 504:
-                throw new Error(
-                  "Request timed out. The server took too long to respond. Please try again."
-                )
-              case 503:
-                throw new Error(
-                  "Service temporarily unavailable. Please try again later."
-                )
-              default:
-                if (error.response.status >= 500) {
-                  throw new Error(
-                    `Server error (${error.response.status}). Please try again later.`
-                  )
-                }
-            }
-          }
-
-          // Handle specific network errors
-          if (error.message === "socket hang up") {
-            throw new Error("Connection was interrupted. Please try again.")
-          }
-          if (error.code === "ECONNRESET") {
-            throw new Error("Connection was reset. Please try again.")
-          }
-          if (error.code === "ECONNABORTED") {
-            throw new Error("Request timed out. Please try again.")
-          }
 
           // Handle API-specific errors
           if (
@@ -326,10 +273,13 @@ export class ProcessingHelper {
           retryCount
         })
 
-        // If we've exhausted retries or it's not a retryable error, return the error
-        if (retryCount >= MAX_RETRIES) {
+        // If it's a cancellation or we've exhausted retries, return the error
+        if (axios.isCancel(error) || retryCount >= MAX_RETRIES) {
           return { success: false, error: error.message }
         }
+
+        // Increment retry count and continue
+        retryCount++
       }
     }
 
@@ -342,7 +292,7 @@ export class ProcessingHelper {
 
   private async generateSolutionsHelper(signal: AbortSignal) {
     try {
-      const problemInfo = this.appState.getProblemInfo()
+      const problemInfo = this.deps.getProblemInfo()
       if (!problemInfo) {
         throw new Error("No problem info available")
       }
@@ -365,21 +315,21 @@ export class ProcessingHelper {
 
       return { success: true, data: response.data }
     } catch (error: any) {
-      const mainWindow = this.appState.getMainWindow()
+      const mainWindow = this.deps.getMainWindow()
 
       // Handle timeout errors (both 504 and axios timeout)
       if (error.code === "ECONNABORTED" || error.response?.status === 504) {
         // Cancel ongoing API requests
         this.cancelOngoingRequests()
         // Clear both screenshot queues
-        this.appState.clearQueues()
+        this.deps.clearQueues()
         // Update view state to queue
-        this.appState.setView("queue")
+        this.deps.setView("queue")
         // Notify renderer to switch view
         if (mainWindow && !mainWindow.isDestroyed()) {
           mainWindow.webContents.send("reset-view")
           mainWindow.webContents.send(
-            this.appState.PROCESSING_EVENTS.INITIAL_SOLUTION_ERROR,
+            this.deps.PROCESSING_EVENTS.INITIAL_SOLUTION_ERROR,
             "Request timed out. The server took too long to respond. Please try again."
           )
         }
@@ -392,7 +342,7 @@ export class ProcessingHelper {
       if (error.response?.data?.error?.includes("API Key out of credits")) {
         if (mainWindow) {
           mainWindow.webContents.send(
-            this.appState.PROCESSING_EVENTS.API_KEY_OUT_OF_CREDITS
+            this.deps.PROCESSING_EVENTS.API_KEY_OUT_OF_CREDITS
           )
         }
         return { success: false, error: error.response.data.error }
@@ -405,7 +355,7 @@ export class ProcessingHelper {
       ) {
         if (mainWindow) {
           mainWindow.webContents.send(
-            this.appState.PROCESSING_EVENTS.API_KEY_INVALID
+            this.deps.PROCESSING_EVENTS.API_KEY_INVALID
           )
         }
         return { success: false, error: error.response.data.error }
@@ -422,7 +372,7 @@ export class ProcessingHelper {
     try {
       const imageDataList = screenshots.map((screenshot) => screenshot.data)
 
-      const problemInfo = this.appState.getProblemInfo()
+      const problemInfo = this.deps.getProblemInfo()
       if (!problemInfo) {
         throw new Error("No problem info available")
       }
@@ -430,25 +380,43 @@ export class ProcessingHelper {
       const response = await axios.post(
         `${API_BASE_URL}/api/debug`,
         { imageDataList, problemInfo },
-        { signal }
+        {
+          signal,
+          timeout: 60000,
+          validateStatus: function (status) {
+            return status < 500
+          },
+          maxRedirects: 5,
+          headers: {
+            "Content-Type": "application/json"
+          }
+        }
       )
 
       return { success: true, data: response.data }
     } catch (error: any) {
-      const mainWindow = this.appState.getMainWindow()
+      const mainWindow = this.deps.getMainWindow()
+
+      // Handle cancellation first
+      if (axios.isCancel(error)) {
+        return {
+          success: false,
+          error: "Processing was canceled by the user."
+        }
+      }
 
       if (error.response?.data?.error?.includes("Operation timed out")) {
         // Cancel ongoing API requests
         this.cancelOngoingRequests()
         // Clear both screenshot queues
-        this.appState.clearQueues()
+        this.deps.clearQueues()
         // Update view state to queue
-        this.appState.setView("queue")
+        this.deps.setView("queue")
         // Notify renderer to switch view
         if (mainWindow && !mainWindow.isDestroyed()) {
           mainWindow.webContents.send("reset-view")
           mainWindow.webContents.send(
-            this.appState.PROCESSING_EVENTS.DEBUG_ERROR,
+            this.deps.PROCESSING_EVENTS.DEBUG_ERROR,
             "Operation timed out after 1 minute. Please try again."
           )
         }
@@ -461,7 +429,7 @@ export class ProcessingHelper {
       if (error.response?.data?.error?.includes("API Key out of credits")) {
         if (mainWindow) {
           mainWindow.webContents.send(
-            this.appState.PROCESSING_EVENTS.API_KEY_OUT_OF_CREDITS
+            this.deps.PROCESSING_EVENTS.API_KEY_OUT_OF_CREDITS
           )
         }
         return { success: false, error: error.response.data.error }
@@ -474,7 +442,7 @@ export class ProcessingHelper {
       ) {
         if (mainWindow) {
           mainWindow.webContents.send(
-            this.appState.PROCESSING_EVENTS.API_KEY_INVALID
+            this.deps.PROCESSING_EVENTS.API_KEY_INVALID
           )
         }
         return { success: false, error: error.response.data.error }
@@ -500,11 +468,15 @@ export class ProcessingHelper {
     }
 
     // Reset hasDebugged flag
-    this.appState.setHasDebugged(false)
+    this.deps.setHasDebugged(false)
 
-    const mainWindow = this.appState.getMainWindow()
+    // Clear any pending state
+    this.deps.setProblemInfo(null)
+
+    const mainWindow = this.deps.getMainWindow()
     if (wasCancelled && mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send("Processing was canceled by the user.")
+      // Send a clear message that processing was cancelled
+      mainWindow.webContents.send(this.deps.PROCESSING_EVENTS.NO_SCREENSHOTS)
     }
   }
 }

@@ -1,11 +1,11 @@
 // ipcHandlers.ts
 
-import { createClient } from "@supabase/supabase-js"
 import { ipcMain, shell } from "electron"
-import { AppState } from "./main"
+import { createClient } from "@supabase/supabase-js"
 import { randomBytes } from "crypto"
+import { IIpcHandlerDeps } from "./main"
 
-export function initializeIpcHandlers(appState: AppState): void {
+export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
   console.log("Initializing IPC handlers")
 
   // Create Supabase client when needed
@@ -16,60 +16,65 @@ export function initializeIpcHandlers(appState: AppState): void {
     )
   }
 
+  // Screenshot queue handlers
+  ipcMain.handle("get-screenshot-queue", () => {
+    return deps.getScreenshotQueue()
+  })
+
+  ipcMain.handle("get-extra-screenshot-queue", () => {
+    return deps.getExtraScreenshotQueue()
+  })
+
+  ipcMain.handle("delete-screenshot", async (event, path: string) => {
+    return deps.deleteScreenshot(path)
+  })
+
+  ipcMain.handle("get-image-preview", async (event, path: string) => {
+    return deps.getImagePreview(path)
+  })
+
+  // Screenshot processing handlers
+  ipcMain.handle("process-screenshots", async () => {
+    await deps.processingHelper?.processScreenshots()
+  })
+
+  // Window dimension handlers
   ipcMain.handle(
     "update-content-dimensions",
     async (event, { width, height }: { width: number; height: number }) => {
       if (width && height) {
-        appState.setWindowDimensions(width, height)
+        deps.setWindowDimensions(width, height)
       }
     }
   )
 
-  ipcMain.handle("delete-screenshot", async (event, path: string) => {
-    return appState.deleteScreenshot(path)
-  })
-
-  ipcMain.handle("clear-store", async () => {
-    try {
-      return { success: true }
-    } catch (error) {
-      console.error("Error clearing store:", error)
-      return { success: false, error: "Failed to clear store" }
+  ipcMain.handle(
+    "set-window-dimensions",
+    (event, width: number, height: number) => {
+      deps.setWindowDimensions(width, height)
     }
-  })
+  )
 
-  ipcMain.handle("take-screenshot", async () => {
-    try {
-      const screenshotPath = await appState.takeScreenshot()
-      const preview = await appState.getImagePreview(screenshotPath)
-      return { path: screenshotPath, preview }
-    } catch (error) {
-      console.error("Error taking screenshot:", error)
-      throw error
-    }
-  })
-
+  // Screenshot management handlers
   ipcMain.handle("get-screenshots", async () => {
     try {
       let previews = []
-      const currentView = appState.getView()
+      const currentView = deps.getView()
 
       if (currentView === "queue") {
-        const queue = appState.getScreenshotQueue()
-
+        const queue = deps.getScreenshotQueue()
         previews = await Promise.all(
           queue.map(async (path) => ({
             path,
-            preview: await appState.getImagePreview(path)
+            preview: await deps.getImagePreview(path)
           }))
         )
       } else {
-        const extraQueue = appState.getExtraScreenshotQueue()
-
+        const extraQueue = deps.getExtraScreenshotQueue()
         previews = await Promise.all(
           extraQueue.map(async (path) => ({
             path,
-            preview: await appState.getImagePreview(path)
+            preview: await deps.getImagePreview(path)
           }))
         )
       }
@@ -81,24 +86,50 @@ export function initializeIpcHandlers(appState: AppState): void {
     }
   })
 
-  ipcMain.handle("toggle-window", async () => {
-    console.log("toggle-window handler called")
+  // Screenshot trigger handlers
+  ipcMain.handle("trigger-screenshot", async () => {
+    const mainWindow = deps.getMainWindow()
+    if (mainWindow) {
+      try {
+        const screenshotPath = await deps.takeScreenshot()
+        const preview = await deps.getImagePreview(screenshotPath)
+        mainWindow.webContents.send("screenshot-taken", {
+          path: screenshotPath,
+          preview
+        })
+        return { success: true }
+      } catch (error) {
+        console.error("Error triggering screenshot:", error)
+        return { error: "Failed to trigger screenshot" }
+      }
+    }
+    return { error: "No main window available" }
+  })
+
+  ipcMain.handle("take-screenshot", async () => {
     try {
-      appState.toggleMainWindow()
-      console.log("Window toggled successfully")
-      return { success: true }
+      const screenshotPath = await deps.takeScreenshot()
+      const preview = await deps.getImagePreview(screenshotPath)
+      return { path: screenshotPath, preview }
     } catch (error) {
-      console.error("Error in toggle-window handler:", error)
-      return { success: false, error: String(error) }
+      console.error("Error taking screenshot:", error)
+      return { error: "Failed to take screenshot" }
     }
   })
 
+  // Auth related handlers
+  ipcMain.handle("get-pkce-verifier", () => {
+    return randomBytes(32).toString("base64url")
+  })
+
+  ipcMain.handle("open-external-url", (event, url: string) => {
+    shell.openExternal(url)
+  })
+
+  // Subscription handlers
   ipcMain.handle("open-subscription-portal", async (_event, authData) => {
     try {
-      // Generate a secure random token
       const token = randomBytes(32).toString("hex")
-
-      // Store the token in Supabase with a 5-minute expiration
       const supabase = createSupabaseClient()
       const { error } = await supabase.from("auth_tokens").insert({
         user_id: authData.id,
@@ -111,9 +142,7 @@ export function initializeIpcHandlers(appState: AppState): void {
         throw new Error("Failed to create auth token")
       }
 
-      // Open the checkout page with the token
       const isDev = process.env.NODE_ENV === "development"
-
       const url = isDev
         ? `https://www.interviewcoder.co/checkout?token=${token}`
         : `https://www.interviewcoder.co/checkout?token=${token}`
@@ -132,96 +161,103 @@ export function initializeIpcHandlers(appState: AppState): void {
     }
   })
 
+  // Window management handlers
+  ipcMain.handle("toggle-window", () => {
+    try {
+      deps.toggleMainWindow()
+      return { success: true }
+    } catch (error) {
+      console.error("Error toggling window:", error)
+      return { error: "Failed to toggle window" }
+    }
+  })
+
   ipcMain.handle("reset-queues", async () => {
     try {
-      appState.clearQueues()
+      deps.clearQueues()
       return { success: true }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error resetting queues:", error)
-      return { success: false, error: error.message }
+      return { error: "Failed to reset queues" }
     }
   })
 
-  // Take Screenshot (Command + H)
-  ipcMain.handle("trigger-screenshot", async () => {
-    const mainWindow = appState.getMainWindow()
-    if (mainWindow) {
-      try {
-        const screenshotPath = await appState.takeScreenshot()
-        const preview = await appState.getImagePreview(screenshotPath)
-        mainWindow.webContents.send("screenshot-taken", {
-          path: screenshotPath,
-          preview
-        })
-        return { success: true }
-      } catch (error) {
-        console.error("Error capturing screenshot:", error)
-        return { success: false, error: String(error) }
-      }
-    }
-    return { success: false, error: "No main window found" }
-  })
-
-  // Process Screenshots (Command + Enter)
+  // Process screenshot handlers
   ipcMain.handle("trigger-process-screenshots", async () => {
     try {
-      await appState.processingHelper.processScreenshots()
+      await deps.processingHelper?.processScreenshots()
       return { success: true }
     } catch (error) {
-      return { success: false, error: String(error) }
+      console.error("Error processing screenshots:", error)
+      return { error: "Failed to process screenshots" }
     }
   })
 
-  // Reset (Command + R)
+  // Reset handlers
   ipcMain.handle("trigger-reset", () => {
     try {
-      appState.processingHelper.cancelOngoingRequests()
-      appState.clearQueues()
-      appState.setView("queue")
-      const mainWindow = appState.getMainWindow()
+      // First cancel any ongoing requests
+      deps.processingHelper?.cancelOngoingRequests()
+
+      // Clear all queues immediately
+      deps.clearQueues()
+
+      // Reset view to queue
+      deps.setView("queue")
+
+      // Get main window and send reset events
+      const mainWindow = deps.getMainWindow()
       if (mainWindow && !mainWindow.isDestroyed()) {
+        // Send reset events in sequence
         mainWindow.webContents.send("reset-view")
+        mainWindow.webContents.send("reset")
       }
+
       return { success: true }
     } catch (error) {
-      return { success: false, error: String(error) }
+      console.error("Error triggering reset:", error)
+      return { error: "Failed to trigger reset" }
     }
   })
 
-  // Window Movement
+  // Window movement handlers
   ipcMain.handle("trigger-move-left", () => {
     try {
-      appState.moveWindowLeft()
+      deps.moveWindowLeft()
       return { success: true }
     } catch (error) {
-      return { success: false, error: String(error) }
+      console.error("Error moving window left:", error)
+      return { error: "Failed to move window left" }
     }
   })
 
   ipcMain.handle("trigger-move-right", () => {
     try {
-      appState.moveWindowRight()
+      deps.moveWindowRight()
       return { success: true }
     } catch (error) {
-      return { success: false, error: String(error) }
+      console.error("Error moving window right:", error)
+      return { error: "Failed to move window right" }
     }
   })
 
   ipcMain.handle("trigger-move-up", () => {
     try {
-      appState.moveWindowUp()
+      deps.moveWindowUp()
       return { success: true }
     } catch (error) {
-      return { success: false, error: String(error) }
+      console.error("Error moving window up:", error)
+      return { error: "Failed to move window up" }
     }
   })
 
   ipcMain.handle("trigger-move-down", () => {
     try {
-      appState.moveWindowDown()
+      deps.moveWindowDown()
       return { success: true }
     } catch (error) {
-      return { success: false, error: String(error) }
+      console.error("Error moving window down:", error)
+      return { error: "Failed to move window down" }
     }
   })
 }
