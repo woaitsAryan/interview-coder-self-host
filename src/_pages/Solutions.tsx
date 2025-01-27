@@ -118,8 +118,9 @@ export const ComplexitySection = ({
 
 interface SolutionsProps {
   setView: React.Dispatch<React.SetStateAction<"queue" | "solutions" | "debug">>
+  credits: number
 }
-const Solutions: React.FC<SolutionsProps> = ({ setView }) => {
+const Solutions: React.FC<SolutionsProps> = ({ setView, credits }) => {
   const queryClient = useQueryClient()
   const contentRef = useRef<HTMLDivElement>(null)
 
@@ -304,6 +305,13 @@ const Solutions: React.FC<SolutionsProps> = ({ setView }) => {
           "There are no extra screenshots to process.",
           "neutral"
         )
+      }),
+      window.electronAPI.onOutOfCredits(() => {
+        showToast(
+          "Out of Credits",
+          "You are out of credits. Please refill at https://www.interviewcoder.co/settings.",
+          "error"
+        )
       })
     ]
 
@@ -395,9 +403,11 @@ const Solutions: React.FC<SolutionsProps> = ({ setView }) => {
 
           {/* Navbar of commands with the SolutionsHelper */}
           <SolutionCommands
-            extraScreenshots={extraScreenshots}
             onTooltipVisibilityChange={handleTooltipVisibilityChange}
             isProcessing={!problemStatementData || !solutionData}
+            screenshots={extraScreenshots}
+            extraScreenshots={extraScreenshots}
+            credits={credits}
           />
 
           {/* Main Content - Modified width constraints */}

@@ -1,10 +1,10 @@
 // Debug.tsx
-import React, { useState, useEffect, useRef } from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
+import React, { useEffect, useRef, useState } from "react"
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
 import { dracula } from "react-syntax-highlighter/dist/esm/styles/prism"
-import { ComplexitySection, ContentSection } from "./Solutions"
 import ScreenshotQueue from "../components/Queue/ScreenshotQueue"
+import SolutionCommands from "../components/Solutions/SolutionCommands"
 import {
   Toast,
   ToastDescription,
@@ -12,9 +12,8 @@ import {
   ToastTitle,
   ToastVariant
 } from "../components/ui/toast"
-import SolutionCommands from "../components/Solutions/SolutionCommands"
-import { diffLines } from "diff"
 import { Screenshot } from "../types/screenshots"
+import { ComplexitySection, ContentSection } from "./Solutions"
 
 type DiffLine = {
   value: string

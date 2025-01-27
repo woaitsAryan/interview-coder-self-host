@@ -5,7 +5,11 @@ import Queue from "../_pages/Queue"
 import Solutions from "../_pages/Solutions"
 import { useToast } from "../contexts/toast"
 
-const SubscribedApp: React.FC = () => {
+interface SubscribedAppProps {
+  credits: number
+}
+
+const SubscribedApp: React.FC<SubscribedAppProps> = ({ credits }) => {
   const queryClient = useQueryClient()
   const [view, setView] = useState<"queue" | "solutions" | "debug">("queue")
   const containerRef = useRef<HTMLDivElement>(null)
@@ -117,9 +121,9 @@ const SubscribedApp: React.FC = () => {
   return (
     <div ref={containerRef} className="min-h-0">
       {view === "queue" ? (
-        <Queue setView={setView} />
+        <Queue setView={setView} credits={credits} />
       ) : view === "solutions" ? (
-        <Solutions setView={setView} />
+        <Solutions setView={setView} credits={credits} />
       ) : null}
     </div>
   )

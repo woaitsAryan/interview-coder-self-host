@@ -18,7 +18,8 @@ async function fetchScreenshots(): Promise<Screenshot[]> {
 
 const Queue: React.FC<{
   setView: (view: "queue" | "solutions" | "debug") => void
-}> = ({ setView }) => {
+  credits: number
+}> = ({ setView, credits }) => {
   const { showToast } = useToast()
 
   const [isTooltipVisible, setIsTooltipVisible] = useState(false)
@@ -99,6 +100,13 @@ const Queue: React.FC<{
           "There are no screenshots to process.",
           "neutral"
         )
+      }),
+      window.electronAPI.onOutOfCredits(() => {
+        showToast(
+          "Out of Credits",
+          "You are out of credits. Please refill at https://www.interviewcoder.co/settings.",
+          "error"
+        )
       })
     ]
 
@@ -126,6 +134,7 @@ const Queue: React.FC<{
           <QueueCommands
             onTooltipVisibilityChange={handleTooltipVisibilityChange}
             screenshotCount={screenshots.length}
+            credits={credits}
           />
         </div>
       </div>

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, screen, shell } from "electron"
+import { app, BrowserWindow, screen, shell, ipcMain } from "electron"
 import path from "path"
 import { initializeIpcHandlers } from "./ipcHandlers"
 import { ProcessingHelper } from "./ProcessingHelper"
@@ -236,7 +236,7 @@ async function createWindow(): Promise<void> {
   const workArea = primaryDisplay.workAreaSize
   state.screenWidth = workArea.width
   state.screenHeight = workArea.height
-  state.step = Math.floor(state.screenWidth / 10)
+  state.step = Math.floor(state.screenWidth / 20)
 
   const windowSettings: Electron.BrowserWindowConstructorOptions = {
     height: 600,
@@ -365,6 +365,8 @@ function hideMainWindow(): void {
     state.mainWindow.setOpacity(0)
     state.mainWindow.hide()
     state.isWindowVisible = false
+    // Ensure we don't steal focus when hiding
+    app.hide()
   }
 }
 
@@ -381,8 +383,11 @@ function showMainWindow(): void {
     state.mainWindow.setOpacity(0)
     state.mainWindow.show()
     state.mainWindow.setOpacity(1)
+    // Use showInactive to prevent stealing focus
     state.mainWindow.showInactive()
     state.isWindowVisible = true
+    // Ensure we don't activate the app
+    app.hide()
   }
 }
 
@@ -415,9 +420,7 @@ function setWindowDimensions(width: number, height: number): void {
     const [currentX, currentY] = state.mainWindow.getPosition()
     const primaryDisplay = screen.getPrimaryDisplay()
     const workArea = primaryDisplay.workAreaSize
-    const maxWidth = Math.floor(
-      workArea.width * (state.hasDebugged ? 0.75 : 0.5)
-    )
+    const maxWidth = Math.floor(workArea.width * 0.5)
 
     state.mainWindow.setBounds({
       x: Math.min(currentX, workArea.width - maxWidth),

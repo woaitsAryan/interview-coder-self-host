@@ -6,7 +6,7 @@ interface Window {
       on: (channel: string, func: (...args: any[]) => void) => void
       removeListener: (channel: string, func: (...args: any[]) => void) => void
     }
-
+    onOutOfCredits: (callback: () => void) => () => void
     openSubscriptionPortal: (authData: {
       id: string
       email: string
@@ -31,11 +31,13 @@ interface Window {
     onSolutionError: (callback: (error: string) => void) => () => void
     onProcessingNoScreenshots: (callback: () => void) => () => void
     onProblemExtracted: (callback: (data: any) => void) => () => void
+    openSettingsPortal: () => Promise<void>
     onSolutionSuccess: (callback: (data: any) => void) => () => void
     onUnauthorized: (callback: () => void) => () => void
     onDebugError: (callback: (error: string) => void) => () => void
     onSubscriptionUpdated: (callback: () => void) => () => void
     onSubscriptionPortalClosed: (callback: () => void) => () => void
+    onOutOfCredits: (callback: () => void) => () => void
     onReset: (callback: () => void) => () => void
     takeScreenshot: () => Promise<void>
     moveWindowLeft: () => Promise<void>

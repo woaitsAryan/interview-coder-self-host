@@ -6,11 +6,13 @@ import { useToast } from "../../contexts/toast"
 interface QueueCommandsProps {
   onTooltipVisibilityChange: (visible: boolean, height: number) => void
   screenshotCount?: number
+  credits: number
 }
 
 const QueueCommands: React.FC<QueueCommandsProps> = ({
   onTooltipVisibilityChange,
-  screenshotCount = 0
+  screenshotCount = 0,
+  credits
 }) => {
   const [isTooltipVisible, setIsTooltipVisible] = useState(false)
   const tooltipRef = useRef<HTMLDivElement>(null)
@@ -50,33 +52,6 @@ const QueueCommands: React.FC<QueueCommandsProps> = ({
     <div>
       <div className="pt-2 w-fit">
         <div className="text-xs text-white/90 backdrop-blur-md bg-black/60 rounded-lg py-2 px-4 flex items-center justify-center gap-4">
-          {/* Show/Hide */}
-          <div
-            className="flex items-center gap-2 cursor-pointer rounded px-2 py-1.5 hover:bg-white/10 transition-colors"
-            onClick={async () => {
-              try {
-                const result = await window.electronAPI.toggleMainWindow()
-                if (!result.success) {
-                  console.error("Failed to toggle window:", result.error)
-                  showToast("Error", "Failed to toggle window", "error")
-                }
-              } catch (error) {
-                console.error("Error toggling window:", error)
-                showToast("Error", "Failed to toggle window", "error")
-              }
-            }}
-          >
-            <span className="text-[11px] leading-none">Show/Hide</span>
-            <div className="flex gap-1">
-              <button className="bg-white/10 rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
-                ⌘
-              </button>
-              <button className="bg-white/10 rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
-                B
-              </button>
-            </div>
-          </div>
-
           {/* Screenshot */}
           <div
             className="flex items-center gap-2 cursor-pointer rounded px-2 py-1.5 hover:bg-white/10 transition-colors"
@@ -109,8 +84,19 @@ const QueueCommands: React.FC<QueueCommandsProps> = ({
           {/* Solve Command */}
           {screenshotCount > 0 && (
             <div
-              className="flex items-center gap-2 cursor-pointer rounded px-2 py-1.5 hover:bg-white/10 transition-colors"
+              className={`flex flex-col cursor-pointer rounded px-2 py-1.5 hover:bg-white/10 transition-colors ${
+                credits <= 0 ? "opacity-50 cursor-not-allowed" : ""
+              }`}
               onClick={async () => {
+                if (credits <= 0) {
+                  showToast(
+                    "Out of Credits",
+                    "You are out of credits. Please refill at https://www.interviewcoder.co/settings.",
+                    "error"
+                  )
+                  return
+                }
+
                 try {
                   const result =
                     await window.electronAPI.triggerProcessScreenshots()
@@ -127,14 +113,16 @@ const QueueCommands: React.FC<QueueCommandsProps> = ({
                 }
               }}
             >
-              <span className="text-[11px] leading-none">Solve</span>
-              <div className="flex gap-1">
-                <button className="bg-white/10 rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
-                  ⌘
-                </button>
-                <button className="bg-white/10 rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
-                  ↵
-                </button>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] leading-none">Solve </span>
+                <div className="flex gap-1 ml-2">
+                  <button className="bg-white/10 rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
+                    ⌘
+                  </button>
+                  <button className="bg-white/10 rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
+                    ↵
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -304,7 +292,7 @@ const QueueCommands: React.FC<QueueCommandsProps> = ({
                         }}
                       >
                         <div className="flex items-center justify-between">
-                          <span className="truncate">Solve Problem</span>
+                          <span className="truncate">Solve</span>
                           <div className="flex gap-1 flex-shrink-0">
                             <span className="bg-white/20 px-1.5 py-0.5 rounded text-[10px] leading-none">
                               ⌘
@@ -324,6 +312,25 @@ const QueueCommands: React.FC<QueueCommandsProps> = ({
 
                     {/* Separator and Log Out */}
                     <div className="pt-3 mt-3 border-t border-white/10">
+                      {/* Credits Display */}
+                      <div className="mb-3 px-2 space-y-1">
+                        <div className="flex items-center justify-between text-[13px] font-medium text-white/90">
+                          <span>Credits Remaining</span>
+                          <span>{credits} / 50</span>
+                        </div>
+                        <div className="text-[11px] text-white/50">
+                          Refill at{" "}
+                          <span
+                            className="underline cursor-pointer hover:opacity-80"
+                            onClick={() =>
+                              window.electronAPI.openSettingsPortal()
+                            }
+                          >
+                            www.interviewcoder.co/settings
+                          </span>
+                        </div>
+                      </div>
+
                       <button
                         onClick={handleSignOut}
                         className="flex items-center gap-2 text-[11px] text-red-400 hover:text-red-300 transition-colors w-full"

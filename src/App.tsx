@@ -19,6 +19,7 @@ import {
   ToastViewport
 } from "./components/ui/toast"
 import { ToastContext } from "./contexts/toast"
+import { useToast } from "./contexts/toast"
 
 declare global {
   interface Window {
@@ -31,6 +32,7 @@ declare global {
         ) => void
       }
     }
+    __CREDITS__: number
   }
 }
 
@@ -57,6 +59,7 @@ function App() {
     description: "",
     variant: "neutral"
   })
+  const [credits, setCredits] = useState<number>(0)
 
   // Show toast method
   const showToast = (
@@ -101,6 +104,102 @@ function App() {
       }
     }
   }, [])
+
+  // Fetch initial credits and subscribe to changes
+  useEffect(() => {
+    const fetchCredits = async () => {
+      const {
+        data: { user }
+      } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { data: subscription } = await supabase
+        .from("subscriptions")
+        .select("credits")
+        .eq("user_id", user.id)
+        .single()
+
+      if (subscription) {
+        setCredits(subscription.credits)
+        window.__CREDITS__ = subscription.credits
+      }
+    }
+
+    fetchCredits()
+
+    // Get current user ID for subscription filter
+    const getCurrentUserId = async () => {
+      const {
+        data: { user }
+      } = await supabase.auth.getUser()
+      return user?.id
+    }
+
+    // Subscribe to credits changes
+    getCurrentUserId().then((userId) => {
+      if (!userId) return
+
+      const channel = supabase
+        .channel("credits")
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "subscriptions",
+            filter: `user_id=eq.${userId}`
+          },
+          (payload) => {
+            const newCredits = payload.new.credits
+            setCredits(newCredits)
+            window.__CREDITS__ = newCredits
+          }
+        )
+        .subscribe()
+
+      return () => {
+        channel.unsubscribe()
+      }
+    })
+  }, [])
+
+  // Listen for processing events to update credits
+  useEffect(() => {
+    const cleanupFunctions = [
+      window.electronAPI.onSolutionSuccess(async () => {
+        const {
+          data: { user }
+        } = await supabase.auth.getUser()
+        if (!user) return
+
+        // Decrement credits
+        const { data: subscription, error } = await supabase
+          .from("subscriptions")
+          .update({ credits: credits - 1 })
+          .eq("user_id", user.id)
+          .select("credits")
+          .single()
+
+        if (error) {
+          console.error("Error updating credits:", error)
+          return
+        }
+
+        setCredits(subscription.credits)
+        window.__CREDITS__ = subscription.credits
+      }),
+
+      window.electronAPI.onOutOfCredits(() => {
+        showToast(
+          "Out of Credits",
+          "You are out of credits. Please refill at https://www.interviewcoder.co/settings.",
+          "error"
+        )
+      })
+    ]
+
+    return () => cleanupFunctions.forEach((cleanup) => cleanup())
+  }, [credits, showToast])
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -373,6 +472,7 @@ function AppContent() {
   const [loading, setLoading] = useState(true)
   const [subscriptionLoading, setSubscriptionLoading] = useState(false)
   const [isSubscribed, setIsSubscribed] = useState(false)
+  const [credits, setCredits] = useState<number>(0)
   const queryClient = useQueryClient()
 
   // Check auth state on mount
@@ -392,6 +492,7 @@ function AppContent() {
     const checkSubscription = async () => {
       if (!user?.id) {
         setIsSubscribed(false)
+        setCredits(0)
         return
       }
 
@@ -399,11 +500,12 @@ function AppContent() {
       try {
         const { data: subscription } = await supabase
           .from("subscriptions")
-          .select("*")
+          .select("*, credits")
           .eq("user_id", user.id)
           .maybeSingle()
 
         setIsSubscribed(!!subscription)
+        setCredits(subscription?.credits ?? 0)
       } finally {
         setSubscriptionLoading(false)
       }
@@ -444,12 +546,13 @@ function AppContent() {
             // Check current subscription directly
             const { data: subscription } = await supabase
               .from("subscriptions")
-              .select("*")
+              .select("*, credits")
               .eq("user_id", user.id)
               .maybeSingle()
 
             console.log("Current subscription check result:", subscription)
             setIsSubscribed(!!subscription)
+            setCredits(subscription?.credits ?? 0)
             await queryClient.invalidateQueries({ queryKey: ["user"] })
           }
 
@@ -460,6 +563,7 @@ function AppContent() {
           ) {
             console.log("New subscription detected")
             setIsSubscribed(true)
+            setCredits(payload.new.credits ?? 0)
             await queryClient.invalidateQueries({ queryKey: ["user"] })
           }
         }
@@ -504,7 +608,7 @@ function AppContent() {
   }
 
   // If logged in and subscribed, show the app
-  return <SubscribedApp />
+  return <SubscribedApp credits={credits} />
 }
 
 export default App

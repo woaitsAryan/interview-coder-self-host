@@ -4,7 +4,7 @@
   "main": "dist-electron/main.js",
   "scripts": {
     "clean": "rimraf dist dist-electron",
-    "dev": "cross-env NODE_ENV=development rm -rf dist dist-electron && concurrently \"tsc -w -p tsconfig.electron.json\" \"vite\" \"wait-on dist-electron/main.js && wait-on tcp:54321 && electron .\"",
+    "dev": "cross-env NODE_ENV=development npm run clean && concurrently \"tsc -w -p tsconfig.electron.json\" \"vite\" \"wait-on http://localhost:54321 && electron .\"",
     "build": "cross-env NODE_ENV=production rm -rf dist dist-electron && vite build && tsc -p tsconfig.electron.json && electron-builder"
   },
   "build": {

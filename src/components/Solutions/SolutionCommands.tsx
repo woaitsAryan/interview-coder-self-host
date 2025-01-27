@@ -8,6 +8,7 @@ export interface SolutionCommandsProps {
   isProcessing: boolean
   screenshots?: Screenshot[]
   extraScreenshots?: Screenshot[]
+  credits: number
 }
 
 const handleSignOut = async () => {
@@ -27,8 +28,8 @@ const handleSignOut = async () => {
 const SolutionCommands: React.FC<SolutionCommandsProps> = ({
   onTooltipVisibilityChange,
   isProcessing,
-
-  extraScreenshots = []
+  extraScreenshots = [],
+  credits
 }) => {
   const [isTooltipVisible, setIsTooltipVisible] = useState(false)
   const tooltipRef = useRef<HTMLDivElement>(null)
@@ -417,6 +418,25 @@ const SolutionCommands: React.FC<SolutionCommandsProps> = ({
 
                     {/* Separator and Log Out */}
                     <div className="pt-3 mt-3 border-t border-white/10">
+                      {/* Credits Display */}
+                      <div className="mb-3 px-2 space-y-1">
+                        <div className="flex items-center justify-between text-[13px] font-medium text-white/90">
+                          <span>Credits Remaining</span>
+                          <span>{credits} / 50</span>
+                        </div>
+                        <div className="text-[11px] text-white/50">
+                          Refill at{" "}
+                          <span
+                            className="underline cursor-pointer hover:opacity-80"
+                            onClick={() =>
+                              window.electronAPI.openSettingsPortal()
+                            }
+                          >
+                            www.interviewcoder.co/settings
+                          </span>
+                        </div>
+                      </div>
+
                       <button
                         onClick={handleSignOut}
                         className="flex items-center gap-2 text-[11px] text-red-400 hover:text-red-300 transition-colors w-full"

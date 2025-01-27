@@ -127,6 +127,9 @@ export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
   })
 
   // Subscription handlers
+  ipcMain.handle("open-settings-portal", () => {
+    shell.openExternal("https://www.interviewcoder.co/settings")
+  })
   ipcMain.handle("open-subscription-portal", async (_event, authData) => {
     try {
       const token = randomBytes(32).toString("hex")
