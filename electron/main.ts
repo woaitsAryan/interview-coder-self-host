@@ -37,7 +37,7 @@ const state = {
   PROCESSING_EVENTS: {
     UNAUTHORIZED: "processing-unauthorized",
     NO_SCREENSHOTS: "processing-no-screenshots",
-    API_KEY_OUT_OF_CREDITS: "processing-api-key-out-of-credits",
+    OUT_OF_CREDITS: "out-of-credits",
     API_KEY_INVALID: "processing-api-key-invalid",
     INITIAL_START: "initial-start",
     PROBLEM_EXTRACTED: "problem-extracted",

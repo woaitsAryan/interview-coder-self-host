@@ -28,9 +28,18 @@ export class ProcessingHelper {
     if (!mainWindow) return 0
 
     try {
-      return await mainWindow.webContents.executeJavaScript(
+      // First try to get credits from window.__CREDITS__
+      const credits = await mainWindow.webContents.executeJavaScript(
         "window.__CREDITS__"
       )
+
+      // If credits is undefined or null, return 0
+      if (credits === undefined || credits === null) {
+        console.warn("Credits not initialized yet")
+        return 0
+      }
+
+      return credits
     } catch (error) {
       console.error("Error getting credits:", error)
       return 0
@@ -80,7 +89,7 @@ export class ProcessingHelper {
           console.log("Processing failed:", result.error)
           if (result.error?.includes("API Key out of credits")) {
             mainWindow.webContents.send(
-              this.deps.PROCESSING_EVENTS.API_KEY_OUT_OF_CREDITS
+              this.deps.PROCESSING_EVENTS.OUT_OF_CREDITS
             )
           } else if (result.error?.includes("OpenAI API key not found")) {
             mainWindow.webContents.send(
@@ -363,7 +372,7 @@ export class ProcessingHelper {
       if (error.response?.data?.error?.includes("API Key out of credits")) {
         if (mainWindow) {
           mainWindow.webContents.send(
-            this.deps.PROCESSING_EVENTS.API_KEY_OUT_OF_CREDITS
+            this.deps.PROCESSING_EVENTS.OUT_OF_CREDITS
           )
         }
         return { success: false, error: error.response.data.error }
@@ -450,7 +459,7 @@ export class ProcessingHelper {
       if (error.response?.data?.error?.includes("API Key out of credits")) {
         if (mainWindow) {
           mainWindow.webContents.send(
-            this.deps.PROCESSING_EVENTS.API_KEY_OUT_OF_CREDITS
+            this.deps.PROCESSING_EVENTS.OUT_OF_CREDITS
           )
         }
         return { success: false, error: error.response.data.error }
