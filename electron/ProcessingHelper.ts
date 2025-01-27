@@ -174,119 +174,100 @@ export class ProcessingHelper {
     screenshots: Array<{ path: string; data: string }>,
     signal: AbortSignal
   ) {
-    const MAX_RETRIES = 2
-    let retryCount = 0
+    try {
+      const imageDataList = screenshots.map((screenshot) => screenshot.data)
+      const mainWindow = this.deps.getMainWindow()
+      let problemInfo
 
-    while (retryCount <= MAX_RETRIES) {
+      // First API call - extract problem info
       try {
-        const imageDataList = screenshots.map((screenshot) => screenshot.data)
-        const mainWindow = this.deps.getMainWindow()
-        let problemInfo
-
-        // First API call - extract problem info
-        try {
-          const extractResponse = await axios.post(
-            `${API_BASE_URL}/api/extract`,
-            { imageDataList },
-            {
-              signal,
-              timeout: 300000, // 300 second timeout
-              validateStatus: function (status) {
-                return status < 500 // Reject if the status code is >= 500
-              },
-              maxRedirects: 5,
-              headers: {
-                "Content-Type": "application/json"
-              }
+        const extractResponse = await axios.post(
+          `${API_BASE_URL}/api/extract`,
+          { imageDataList },
+          {
+            signal,
+            timeout: 300000, // 300 second timeout
+            validateStatus: function (status) {
+              return status < 500 // Reject if the status code is >= 500
+            },
+            maxRedirects: 5,
+            headers: {
+              "Content-Type": "application/json"
             }
+          }
+        )
+
+        problemInfo = extractResponse.data
+
+        // Store problem info in AppState
+        this.deps.setProblemInfo(problemInfo)
+
+        // Send first success event
+        if (mainWindow) {
+          mainWindow.webContents.send(
+            this.deps.PROCESSING_EVENTS.PROBLEM_EXTRACTED,
+            problemInfo
           )
 
-          problemInfo = extractResponse.data
-
-          // Store problem info in AppState
-          this.deps.setProblemInfo(problemInfo)
-
-          // Send first success event
-          if (mainWindow) {
+          // Generate solutions after successful extraction
+          const solutionsResult = await this.generateSolutionsHelper(signal)
+          if (solutionsResult.success) {
+            // Clear any existing extra screenshots before transitioning to solutions view
+            this.screenshotHelper.clearExtraScreenshotQueue()
             mainWindow.webContents.send(
-              this.deps.PROCESSING_EVENTS.PROBLEM_EXTRACTED,
-              problemInfo
+              this.deps.PROCESSING_EVENTS.SOLUTION_SUCCESS,
+              solutionsResult.data
             )
-
-            // Generate solutions after successful extraction
-            const solutionsResult = await this.generateSolutionsHelper(signal)
-            if (solutionsResult.success) {
-              // Clear any existing extra screenshots before transitioning to solutions view
-              this.screenshotHelper.clearExtraScreenshotQueue()
-              mainWindow.webContents.send(
-                this.deps.PROCESSING_EVENTS.SOLUTION_SUCCESS,
-                solutionsResult.data
-              )
-              return { success: true, data: solutionsResult.data }
-            } else {
-              throw new Error(
-                solutionsResult.error || "Failed to generate solutions"
-              )
-            }
+            return { success: true, data: solutionsResult.data }
+          } else {
+            throw new Error(
+              solutionsResult.error || "Failed to generate solutions"
+            )
           }
-        } catch (error: any) {
-          // If the request was cancelled, don't retry
-          if (axios.isCancel(error)) {
-            return {
-              success: false,
-              error: "Processing was canceled by the user."
-            }
-          }
-
-          console.error("API Error Details:", {
-            status: error.response?.status,
-            data: error.response?.data,
-            message: error.message,
-            code: error.code
-          })
-
-          // Handle API-specific errors
-          if (
-            error.response?.data?.error &&
-            typeof error.response.data.error === "string"
-          ) {
-            if (error.response.data.error.includes("Operation timed out")) {
-              throw new Error(
-                "Operation timed out after 1 minute. Please try again."
-              )
-            }
-            if (error.response.data.error.includes("API Key out of credits")) {
-              throw new Error(error.response.data.error)
-            }
-            throw new Error(error.response.data.error)
-          }
-
-          // If we get here, it's an unknown error
-          throw new Error(error.message || "An unknown error occurred")
         }
       } catch (error: any) {
-        // Log the full error for debugging
-        console.error("Processing error details:", {
-          message: error.message,
-          code: error.code,
-          response: error.response?.data,
-          retryCount
-        })
-
-        // If it's a cancellation or we've exhausted retries, return the error
-        if (axios.isCancel(error) || retryCount >= MAX_RETRIES) {
-          return { success: false, error: error.message }
+        // If the request was cancelled, don't retry
+        if (axios.isCancel(error)) {
+          return {
+            success: false,
+            error: "Processing was canceled by the user."
+          }
         }
 
-        // Increment retry count and continue
-        retryCount++
-      }
-    }
+        console.error("API Error Details:", {
+          status: error.response?.status,
+          data: error.response?.data,
+          message: error.message,
+          code: error.code
+        })
 
-    // If we get here, all retries failed
-    return {
-      success: false,
-      error: "Failed to process after multiple attempts. Please try again."
+        // Handle API-specific errors
+        if (
+          error.response?.data?.error &&
+          typeof error.response.data.error === "string"
+        ) {
+          if (error.response.data.error.includes("Operation timed out")) {
+            throw new Error(
+              "Operation timed out after 1 minute. Please try again."
+            )
+          }
+          if (error.response.data.error.includes("API Key out of credits")) {
+            throw new Error(error.response.data.error)
+          }
+          throw new Error(error.response.data.error)
+        }
+
+        // If we get here, it's an unknown error
+        throw new Error(error.message || "An unknown error occurred")
+      }
+    } catch (error: any) {
+      // Log the full error for debugging
+      console.error("Processing error details:", {
+        message: error.message,
+        code: error.code,
+        response: error.response?.data
+      })
+      return { success: false, error: error.message }
     }
   }
 
