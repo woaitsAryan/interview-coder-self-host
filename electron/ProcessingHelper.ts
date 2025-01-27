@@ -52,8 +52,8 @@ export class ProcessingHelper {
 
     // Check if we have any credits left
     const credits = await this.getCredits()
-    if (credits <= 0) {
-      mainWindow.webContents.send("out-of-credits")
+    if (credits < 1) {
+      mainWindow.webContents.send(this.deps.PROCESSING_EVENTS.OUT_OF_CREDITS)
       return
     }
 
