@@ -45,7 +45,7 @@ const Toast = React.forwardRef<
 >(({ className, variant = "neutral", ...props }, ref) => (
   <ToastPrimitive.Root
     ref={ref}
-    duration={2000} // Added duration prop to make toast disappear after 2 seconds
+    duration={500} // Added duration prop to make toast disappear after 2 seconds
     className={cn(
       "group fixed top-2 left-2 z-50 w-auto max-w-sm px-2 py-1 rounded-sm shadow-sm animate-in fade-in slide-in-from-top",
       toastVariants[variant],

@@ -28,9 +28,9 @@ export class ProcessingHelper {
     if (!mainWindow) return 0
 
     try {
-      // First try to get credits from window.__CREDITS__
+      // Use IPC handler instead of direct executeJavaScript
       const credits = await mainWindow.webContents.executeJavaScript(
-        "window.__CREDITS__"
+        "window.electronAPI.getCredits()"
       )
 
       // If credits is undefined or null, return 0

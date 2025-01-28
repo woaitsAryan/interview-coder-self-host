@@ -16,6 +16,42 @@ export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
     )
   }
 
+  // Credits handlers
+  ipcMain.handle("get-credits", async () => {
+    const mainWindow = deps.getMainWindow()
+    if (!mainWindow) return 0
+
+    try {
+      const credits = await mainWindow.webContents.executeJavaScript(
+        "window.__CREDITS__"
+      )
+      return credits ?? 0
+    } catch (error) {
+      console.error("Error getting credits:", error)
+      return 0
+    }
+  })
+
+  ipcMain.handle("decrement-credits", async () => {
+    const mainWindow = deps.getMainWindow()
+    if (!mainWindow) return
+
+    try {
+      const currentCredits = await mainWindow.webContents.executeJavaScript(
+        "window.__CREDITS__"
+      )
+      if (currentCredits > 0) {
+        const newCredits = currentCredits - 1
+        await mainWindow.webContents.executeJavaScript(
+          `window.__CREDITS__ = ${newCredits}`
+        )
+        mainWindow.webContents.send("credits-updated", newCredits)
+      }
+    } catch (error) {
+      console.error("Error decrementing credits:", error)
+    }
+  })
+
   // Screenshot queue handlers
   ipcMain.handle("get-screenshot-queue", () => {
     return deps.getScreenshotQueue()

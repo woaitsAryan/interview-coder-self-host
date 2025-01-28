@@ -19,7 +19,6 @@ import {
   ToastViewport
 } from "./components/ui/toast"
 import { ToastContext } from "./contexts/toast"
-import { useToast } from "./contexts/toast"
 
 declare global {
   interface Window {
