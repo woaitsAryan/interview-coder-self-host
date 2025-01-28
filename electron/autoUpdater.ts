@@ -22,6 +22,10 @@ export function initAutoUpdater() {
   autoUpdater.allowDowngrade = true
   autoUpdater.allowPrerelease = true
 
+  // Configure update file names
+  autoUpdater.updateConfigPath = "latest-mac.yml"
+  autoUpdater.channel = "latest"
+
   // Enable more verbose logging
   autoUpdater.logger = log
   log.transports.file.level = "debug"

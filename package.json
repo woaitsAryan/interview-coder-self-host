@@ -1,6 +1,6 @@
 {
   "name": "interview-coder-v1",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "main": "dist-electron/main.js",
   "scripts": {
     "clean": "rimraf dist dist-electron",
@@ -34,7 +34,7 @@
           ]
         }
       ],
-      "artifactName": "${productName}-${arch}.${ext}",
+      "artifactName": "Interview-Coder-${arch}.${ext}",
       "icon": "assets/icons/mac/icon.icns",
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
@@ -79,9 +79,8 @@
       {
         "provider": "github",
         "owner": "ibttf",
-        "repo": "interview-coder-v1",
-        "private": true,
-        "token": "process.env.GH_TOKEN",
+        "repo": "interview-coder",
+        "private": false,
         "releaseType": "release"
       }
     ],

@@ -141,7 +141,8 @@ This will:
 after npm run build, hit:
 
 ```
-node scripts/manual-notarize.js "release/Interview Coder-x64.dmg" && xcrun stapler staple "release/Interview Coder-x64.dmg" && node scripts/manual-notarize.js "release/Interview Coder-arm64.dmg" && xcrun stapler staple "release/Interview Coder-arm64.dmg"
+node scripts/manual-notarize.js "release/Interview-Coder-x64.dmg" && xcrun stapler staple "release/Interview-Coder-x64.dmg"
+node scripts/manual-notarize.js "release/Interview-Coder-arm64.dmg" && xcrun stapler staple "release/Interview-Coder-arm64.dmg"
 ```
 
 ## Contributing
