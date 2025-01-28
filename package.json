@@ -32,6 +32,13 @@
             "x64",
             "arm64"
           ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
         }
       ],
       "artifactName": "Interview-Coder-${arch}.${ext}",
