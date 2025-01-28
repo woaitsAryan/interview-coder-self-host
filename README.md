@@ -44,7 +44,7 @@ The application uses unidentifiable global keyboard shortcuts that won't be dete
 1. **Initial Setup**
 
    - Launch the invisible window
-   - Authenticate with OpenAI API key
+   - Login and subscribe
 
 2. **Capturing Problem**
 
