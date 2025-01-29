@@ -460,6 +460,7 @@ function AppContent() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [subscriptionLoading, setSubscriptionLoading] = useState(false)
+  const [creditsLoading, setCreditsLoading] = useState(true)
   const [isSubscribed, setIsSubscribed] = useState(false)
   const [credits, setCredits] = useState<number>(0)
   const queryClient = useQueryClient()
@@ -476,16 +477,18 @@ function AppContent() {
     return () => subscription.unsubscribe()
   }, [])
 
-  // Check subscription status whenever user changes
+  // Check subscription status and initialize credits whenever user changes
   useEffect(() => {
-    const checkSubscription = async () => {
+    const checkSubscriptionAndCredits = async () => {
       if (!user?.id) {
         setIsSubscribed(false)
         setCredits(0)
+        setCreditsLoading(false)
         return
       }
 
       setSubscriptionLoading(true)
+      setCreditsLoading(true)
       try {
         const { data: subscription } = await supabase
           .from("subscriptions")
@@ -494,13 +497,25 @@ function AppContent() {
           .maybeSingle()
 
         setIsSubscribed(!!subscription)
-        setCredits(subscription?.credits ?? 0)
+        if (subscription?.credits !== undefined) {
+          setCredits(subscription.credits)
+          window.__CREDITS__ = subscription.credits
+          // Verify credits are properly set in electron
+          const verifiedCredits = await window.electronAPI.getCredits()
+          console.log("Verified credits:", verifiedCredits)
+          if (verifiedCredits !== subscription.credits) {
+            console.warn("Credits mismatch, retrying initialization...")
+            await new Promise((resolve) => setTimeout(resolve, 500))
+            window.__CREDITS__ = subscription.credits
+          }
+        }
       } finally {
         setSubscriptionLoading(false)
+        setCreditsLoading(false)
       }
     }
 
-    checkSubscription()
+    checkSubscriptionAndCredits()
   }, [user?.id])
 
   useEffect(() => {
@@ -573,13 +588,17 @@ function AppContent() {
     }
   }, [queryClient, user?.id])
 
-  if (loading || (user && subscriptionLoading)) {
+  if (loading || (user && (subscriptionLoading || creditsLoading))) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <div className="w-6 h-6 border-2 border-white/20 border-t-white/80 rounded-full animate-spin"></div>
           <p className="text-white/60 text-sm">
-            {loading ? "Loading..." : "Checking subscription..."}
+            {loading
+              ? "Loading..."
+              : creditsLoading
+              ? "Initializing credits..."
+              : "Checking subscription..."}
           </p>
         </div>
       </div>
