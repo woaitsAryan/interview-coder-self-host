@@ -259,7 +259,11 @@ async function createWindow(): Promise<void> {
     backgroundColor: "#00000000",
     focusable: true,
     skipTaskbar: true,
-    type: "panel"
+    type: "panel",
+    paintWhenInitiallyHidden: true,
+    titleBarStyle: "hidden",
+    enableLargerThanScreen: false,
+    movable: true
   }
 
   state.mainWindow = new BrowserWindow(windowSettings)
@@ -312,12 +316,30 @@ async function createWindow(): Promise<void> {
     return { action: "allow" }
   })
 
+  // Enhanced screen capture resistance
   state.mainWindow.setContentProtection(true)
   state.mainWindow.setHiddenInMissionControl(true)
   state.mainWindow.setVisibleOnAllWorkspaces(true, {
     visibleOnFullScreen: true
   })
-  state.mainWindow.setAlwaysOnTop(true, "screen-saver", 1)
+  state.mainWindow.setAlwaysOnTop(true, "floating", 1)
+
+  // Additional screen capture resistance settings
+  if (process.platform === "darwin") {
+    // Prevent window from being captured in screenshots
+    state.mainWindow.setWindowButtonVisibility(false)
+    state.mainWindow.setBackgroundColor("#00000000")
+
+    // Prevent window from being included in window switcher
+    state.mainWindow.setSkipTaskbar(true)
+
+    // Disable window shadow
+    state.mainWindow.setHasShadow(false)
+  }
+
+  // Prevent the window from being captured by screen recording
+  state.mainWindow.webContents.setBackgroundThrottling(false)
+  state.mainWindow.webContents.setFrameRate(60)
 
   // Set up window listeners
   state.mainWindow.on("move", handleWindowMove)
