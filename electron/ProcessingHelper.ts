@@ -28,17 +28,37 @@ export class ProcessingHelper {
     if (!mainWindow) return 0
 
     try {
-      // Use IPC handler instead of direct executeJavaScript
-      const credits = await mainWindow.webContents.executeJavaScript(
-        "window.electronAPI.getCredits()"
+      // First try direct access to window.__CREDITS__
+      let credits = await mainWindow.webContents.executeJavaScript(
+        "window.__CREDITS__"
       )
 
-      // If credits is undefined or null, return 0
+      // If that fails, wait a short time and try again
       if (credits === undefined || credits === null) {
-        console.warn("Credits not initialized yet")
+        console.log(
+          "Credits not found on first try, waiting 500ms and retrying..."
+        )
+        await new Promise((resolve) => setTimeout(resolve, 500))
+        credits = await mainWindow.webContents.executeJavaScript(
+          "window.__CREDITS__"
+        )
+      }
+
+      // If still undefined, try the electronAPI method
+      if (credits === undefined || credits === null) {
+        console.log("Trying electronAPI method...")
+        credits = await mainWindow.webContents.executeJavaScript(
+          "window.electronAPI && window.electronAPI.getCredits()"
+        )
+      }
+
+      // Final check
+      if (credits === undefined || credits === null) {
+        console.warn("Credits still not initialized after retries")
         return 0
       }
 
+      console.log("Retrieved credits:", credits)
       return credits
     } catch (error) {
       console.error("Error getting credits:", error)

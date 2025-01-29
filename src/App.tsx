@@ -20,21 +20,6 @@ import {
 } from "./components/ui/toast"
 import { ToastContext } from "./contexts/toast"
 
-declare global {
-  interface Window {
-    electron: {
-      ipcRenderer: {
-        on: (channel: string, func: (...args: any[]) => void) => void
-        removeListener: (
-          channel: string,
-          func: (...args: any[]) => void
-        ) => void
-      }
-    }
-    __CREDITS__: number
-  }
-}
-
 // Create a React Query client
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -119,8 +104,12 @@ function App() {
         .single()
 
       if (subscription) {
+        console.log("Setting initial credits:", subscription.credits)
         setCredits(subscription.credits)
         window.__CREDITS__ = subscription.credits
+        // Ensure the value is set
+        const verifyCredits = await window.electronAPI.getCredits()
+        console.log("Verified credits value:", verifyCredits)
       }
     }
 
@@ -150,6 +139,7 @@ function App() {
           },
           (payload) => {
             const newCredits = payload.new.credits
+            console.log("Credits updated from subscription:", newCredits)
             setCredits(newCredits)
             window.__CREDITS__ = newCredits
           }
