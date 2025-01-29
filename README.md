@@ -2,8 +2,6 @@
 
 An invisible desktop application that will help you pass your technical interviews.
 
-https://github.com/user-attachments/assets/caf1e6cd-27d5-4033-b8c5-9df1cb52b21d
-
 ## Invisibility Compatibility
 
 The application is invisible to:
@@ -77,12 +75,12 @@ The application uses unidentifiable global keyboard shortcuts that won't be dete
 
 - Node.js (v16 or higher)
 - npm or bun package manager
-- OpenAI API key (for AI features)
+- Subscription on https://www.interviewcoder.co/settings
 - Screen Recording Permission for Terminal/IDE
   - On macOS:
     1. Go to System Preferences > Security & Privacy > Privacy > Screen Recording
-    2. Ensure your Terminal app (or IDE) has screen recording permission enabled
-    3. Restart your Terminal/IDE after enabling permissions
+    2. Ensure that Interview Coder has screen recording permission enabled
+    3. Restart Interview Coder after enabling permissions
   - On Windows:
     - No additional permissions needed
   - On Linux:
