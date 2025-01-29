@@ -49,7 +49,7 @@ const CodeSection = ({
                 maxWidth: "100%",
                 margin: 0,
                 padding: "1rem",
-                background: "#161b22",
+                background: "rgba(22, 27, 34, 0.5)",
                 borderRadius: "0.5rem"
               }}
               wrapLines={true}

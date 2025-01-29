@@ -69,7 +69,8 @@ const SolutionSection = ({
             margin: 0,
             padding: "1rem",
             whiteSpace: "pre-wrap",
-            wordBreak: "break-all"
+            wordBreak: "break-all",
+            backgroundColor: "rgba(22, 27, 34, 0.5)"
           }}
           wrapLongLines={true}
         >

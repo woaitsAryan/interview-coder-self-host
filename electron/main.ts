@@ -227,7 +227,7 @@ async function createWindow(): Promise<void> {
   const workArea = primaryDisplay.workAreaSize
   state.screenWidth = workArea.width
   state.screenHeight = workArea.height
-  state.step = 40
+  state.step = 60
   state.currentY = 50
 
   const windowSettings: Electron.BrowserWindowConstructorOptions = {
@@ -421,12 +421,21 @@ function moveWindowHorizontal(updateFn: (x: number) => number): void {
 
 function moveWindowVertical(updateFn: (y: number) => number): void {
   if (!state.mainWindow) return
-  console.log("Window height:", state.windowSize?.height)
-  console.log("Current Y:", state.currentY)
-  console.log("Max up limit:", -(state.windowSize?.height || 0) / 2)
+
   const newY = updateFn(state.currentY)
+  // Allow window to go halfway off screen in both directions
   const maxUpLimit = -(state.windowSize?.height || 0) / 2
   const maxDownLimit = state.screenHeight - (state.windowSize?.height || 0) / 2
+
+  // Log the current state and limits
+  console.log({
+    newY,
+    maxUpLimit,
+    maxDownLimit,
+    screenHeight: state.screenHeight,
+    windowHeight: state.windowSize?.height,
+    currentY: state.currentY
+  })
 
   // Only update if within bounds
   if (newY >= maxUpLimit && newY <= maxDownLimit) {
