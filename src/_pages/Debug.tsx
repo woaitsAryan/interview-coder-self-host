@@ -15,54 +15,46 @@ import {
 import { Screenshot } from "../types/screenshots"
 import { ComplexitySection, ContentSection } from "./Solutions"
 
-type DiffLine = {
-  value: string
-  added?: boolean
-  removed?: boolean
-}
-
 const CodeSection = ({
   code,
   isLoading
 }: {
-  code: string | null
+  title: string
+  code: React.ReactNode
   isLoading: boolean
-}) => {
-  return (
-    <div className="space-y-1.5">
-      <h2 className="text-[13px] font-medium text-white tracking-wide">Code</h2>
-      {isLoading ? (
-        <div className="space-y-1">
-          <div className="mt-3 flex">
-            <p className="text-xs bg-gradient-to-r from-gray-300 via-gray-100 to-gray-300 bg-clip-text text-transparent animate-pulse">
-              Loading code...
-            </p>
-          </div>
+}) => (
+  <div className="space-y-2">
+    <h2 className="text-[13px] font-medium text-white tracking-wide"></h2>
+    {isLoading ? (
+      <div className="space-y-1.5">
+        <div className="mt-4 flex">
+          <p className="text-xs bg-gradient-to-r from-gray-300 via-gray-100 to-gray-300 bg-clip-text text-transparent animate-pulse">
+            Loading solutions...
+          </p>
         </div>
-      ) : (
-        <div className="bg-[#161b22] rounded-lg overflow-hidden">
-          <div className="p-3 overflow-x-auto">
-            <SyntaxHighlighter
-              language="python"
-              style={dracula}
-              customStyle={{
-                maxWidth: "100%",
-                margin: 0,
-                padding: "1rem",
-                background: "rgba(22, 27, 34, 0.5)",
-                borderRadius: "0.5rem"
-              }}
-              wrapLines={true}
-              showLineNumbers={true}
-            >
-              {code || ""}
-            </SyntaxHighlighter>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
+      </div>
+    ) : (
+      <div className="w-full">
+        <SyntaxHighlighter
+          showLineNumbers
+          language="python"
+          style={dracula}
+          customStyle={{
+            maxWidth: "100%",
+            margin: 0,
+            padding: "1rem",
+            whiteSpace: "pre-wrap",
+            wordBreak: "break-all",
+            backgroundColor: "rgba(22, 27, 34, 0.5)"
+          }}
+          wrapLongLines={true}
+        >
+          {code as string}
+        </SyntaxHighlighter>
+      </div>
+    )}
+  </div>
+)
 
 async function fetchScreenshots(): Promise<Screenshot[]> {
   try {
