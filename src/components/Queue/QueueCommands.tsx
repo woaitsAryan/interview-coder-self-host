@@ -157,7 +157,7 @@ const QueueCommands: React.FC<QueueCommandsProps> = ({
             {isTooltipVisible && (
               <div
                 ref={tooltipRef}
-                className="absolute top-full right-0 mt-2 w-80"
+                className="absolute top-full left-0 mt-2 w-80 transform -translate-x-[calc(50%-12px)]"
                 style={{ zIndex: 100 }}
               >
                 {/* Add transparent bridge */}

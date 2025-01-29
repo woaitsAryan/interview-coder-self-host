@@ -100,7 +100,7 @@ const SubscribedApp: React.FC<SubscribedAppProps> = ({ credits }) => {
         })
         setView("queue")
       }),
-      window.electronAPI.onReset(() => {
+      window.electronAPI.onResetView(() => {
         queryClient.setQueryData(["problem_statement"], null)
       }),
       window.electronAPI.onProblemExtracted((data: any) => {
