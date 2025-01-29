@@ -460,7 +460,6 @@ function AppContent() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [subscriptionLoading, setSubscriptionLoading] = useState(false)
-  const [creditsLoading, setCreditsLoading] = useState(true)
   const [isSubscribed, setIsSubscribed] = useState(false)
   const [credits, setCredits] = useState<number>(0)
   const queryClient = useQueryClient()
@@ -477,18 +476,16 @@ function AppContent() {
     return () => subscription.unsubscribe()
   }, [])
 
-  // Check subscription status and initialize credits whenever user changes
+  // Check subscription and credits status whenever user changes
   useEffect(() => {
     const checkSubscriptionAndCredits = async () => {
       if (!user?.id) {
         setIsSubscribed(false)
         setCredits(0)
-        setCreditsLoading(false)
         return
       }
 
       setSubscriptionLoading(true)
-      setCreditsLoading(true)
       try {
         const { data: subscription } = await supabase
           .from("subscriptions")
@@ -499,42 +496,29 @@ function AppContent() {
         setIsSubscribed(!!subscription)
         if (subscription?.credits !== undefined) {
           setCredits(subscription.credits)
+          // Only set window.__CREDITS__ after we're sure we have the correct value
           window.__CREDITS__ = subscription.credits
-          // Verify credits are properly set in electron
-          const verifiedCredits = await window.electronAPI.getCredits()
-          console.log("Verified credits:", verifiedCredits)
-          if (verifiedCredits !== subscription.credits) {
-            console.warn("Credits mismatch, retrying initialization...")
-            await new Promise((resolve) => setTimeout(resolve, 500))
-            window.__CREDITS__ = subscription.credits
-          }
         }
       } finally {
         setSubscriptionLoading(false)
-        setCreditsLoading(false)
       }
     }
 
     checkSubscriptionAndCredits()
-  }, [user?.id])
 
-  useEffect(() => {
-    if (!user?.id) return
-
-    console.log("Setting up subscription listener for user:", user.id)
-
-    // Listen to all changes on the subscriptions table
+    // Set up real-time subscription for both subscription status and credits
     const channel = supabase
-      .channel(`sub-${user.id}`)
+      .channel(`sub-and-credits-${user?.id}`)
       .on(
         "postgres_changes",
         {
           event: "*",
           schema: "public",
-          table: "subscriptions"
+          table: "subscriptions",
+          filter: user?.id ? `user_id=eq.${user.id}` : undefined
         },
         async (payload) => {
-          console.log("Subscription event received:", {
+          console.log("Subscription/credits event received:", {
             eventType: payload.eventType,
             old: payload.old,
             new: payload.new
@@ -545,60 +529,59 @@ function AppContent() {
             payload.eventType === "DELETE" ||
             payload.eventType === "UPDATE"
           ) {
-            console.log("Checking current subscription status...")
-
-            // Check current subscription directly
+            console.log("Checking current subscription and credits status...")
             const { data: subscription } = await supabase
               .from("subscriptions")
               .select("*, credits")
-              .eq("user_id", user.id)
+              .eq("user_id", user?.id)
               .maybeSingle()
 
             console.log("Current subscription check result:", subscription)
             setIsSubscribed(!!subscription)
-            setCredits(subscription?.credits ?? 0)
+            if (subscription?.credits !== undefined) {
+              setCredits(subscription.credits)
+              window.__CREDITS__ = subscription.credits
+            } else {
+              setCredits(0)
+              window.__CREDITS__ = 0
+            }
             await queryClient.invalidateQueries({ queryKey: ["user"] })
           }
 
           // Handle INSERT events
           if (
             payload.eventType === "INSERT" &&
-            payload.new?.user_id === user.id
+            payload.new?.user_id === user?.id
           ) {
             console.log("New subscription detected")
             setIsSubscribed(true)
-            setCredits(payload.new.credits ?? 0)
+            const newCredits = payload.new.credits ?? 0
+            setCredits(newCredits)
+            window.__CREDITS__ = newCredits
             await queryClient.invalidateQueries({ queryKey: ["user"] })
           }
         }
       )
-      .on("system", { event: "*" }, (payload) => {
-        console.log("System event received:", payload)
-      })
       .subscribe((status) => {
         console.log("Channel status changed to:", status)
         if (status === "SUBSCRIBED") {
-          console.log("Successfully subscribed to changes for user:", user.id)
+          console.log("Successfully subscribed to changes for user:", user?.id)
         }
       })
 
     return () => {
-      console.log("Cleaning up subscription listener")
+      console.log("Cleaning up subscription and credits listener")
       channel.unsubscribe()
     }
-  }, [queryClient, user?.id])
+  }, [user?.id, queryClient])
 
-  if (loading || (user && (subscriptionLoading || creditsLoading))) {
+  if (loading || (user && subscriptionLoading)) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <div className="w-6 h-6 border-2 border-white/20 border-t-white/80 rounded-full animate-spin"></div>
           <p className="text-white/60 text-sm">
-            {loading
-              ? "Loading..."
-              : creditsLoading
-              ? "Initializing credits..."
-              : "Checking subscription..."}
+            {loading ? "Loading..." : "Checking subscription..."}
           </p>
         </div>
       </div>
@@ -615,7 +598,19 @@ function AppContent() {
     return <SubscribePage user={user} />
   }
 
-  // If logged in and subscribed, show the app
+  // If logged in and subscribed but credits aren't loaded yet, keep showing loading
+  if (credits === undefined) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-6 h-6 border-2 border-white/20 border-t-white/80 rounded-full animate-spin"></div>
+          <p className="text-white/60 text-sm">Loading credits...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // If logged in and subscribed with credits loaded, show the app
   return <SubscribedApp credits={credits} />
 }
 

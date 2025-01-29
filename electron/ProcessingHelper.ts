@@ -28,55 +28,21 @@ export class ProcessingHelper {
     if (!mainWindow) return 0
 
     try {
-      // Maximum number of retries
-      const MAX_RETRIES = 3
-      const RETRY_DELAY = 500 // ms
-      let retries = 0
-      let credits: number | undefined | null = undefined
+      // Get credits directly from window.__CREDITS__ which is now guaranteed to be set correctly
+      const credits = await mainWindow.webContents.executeJavaScript(
+        "window.__CREDITS__"
+      )
 
-      while (
-        retries < MAX_RETRIES &&
-        (credits === undefined || credits === null)
-      ) {
-        // Try direct access to window.__CREDITS__
-        credits = await mainWindow.webContents.executeJavaScript(
-          "window.__CREDITS__"
-        )
-
-        if (credits === undefined || credits === null) {
-          console.log(
-            `Credits not found on try ${
-              retries + 1
-            }, waiting ${RETRY_DELAY}ms before retry...`
-          )
-          await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY))
-          retries++
-        }
-      }
-
-      // If still not found after retries, try the electronAPI method as a fallback
-      if (credits === undefined || credits === null) {
-        console.log("Trying electronAPI method as fallback...")
-        try {
-          credits = await mainWindow.webContents.executeJavaScript(
-            "window.electronAPI && window.electronAPI.getCredits()"
-          )
-        } catch (error) {
-          console.error("Error using electronAPI fallback:", error)
-        }
-      }
-
-      // Final validation
+      // Simple validation
       if (
         typeof credits !== "number" ||
         credits === undefined ||
         credits === null
       ) {
-        console.warn("Credits still not properly initialized after all retries")
+        console.warn("Credits not properly initialized")
         return 0
       }
 
-      console.log("Retrieved credits:", credits)
       return credits
     } catch (error) {
       console.error("Error getting credits:", error)

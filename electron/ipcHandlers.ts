@@ -32,6 +32,22 @@ export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
     }
   })
 
+  ipcMain.handle("set-initial-credits", async (_event, credits: number) => {
+    const mainWindow = deps.getMainWindow()
+    if (!mainWindow) return
+
+    try {
+      // Set the credits in a way that ensures atomicity
+      await mainWindow.webContents.executeJavaScript(
+        `window.__CREDITS__ = ${credits}`
+      )
+      mainWindow.webContents.send("credits-updated", credits)
+    } catch (error) {
+      console.error("Error setting initial credits:", error)
+      throw error
+    }
+  })
+
   ipcMain.handle("decrement-credits", async () => {
     const mainWindow = deps.getMainWindow()
     if (!mainWindow) return
