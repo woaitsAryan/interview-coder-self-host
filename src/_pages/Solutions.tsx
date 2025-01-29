@@ -40,11 +40,13 @@ export const ContentSection = ({
 const SolutionSection = ({
   title,
   content,
-  isLoading
+  isLoading,
+  currentLanguage
 }: {
   title: string
   content: React.ReactNode
   isLoading: boolean
+  currentLanguage: string
 }) => (
   <div className="space-y-2">
     <h2 className="text-[13px] font-medium text-white tracking-wide">
@@ -62,7 +64,7 @@ const SolutionSection = ({
       <div className="w-full">
         <SyntaxHighlighter
           showLineNumbers
-          language="python"
+          language={currentLanguage == "golang" ? "go" : currentLanguage}
           style={dracula}
           customStyle={{
             maxWidth: "100%",
@@ -117,11 +119,18 @@ export const ComplexitySection = ({
   </div>
 )
 
-interface SolutionsProps {
-  setView: React.Dispatch<React.SetStateAction<"queue" | "solutions" | "debug">>
+export interface SolutionsProps {
+  setView: (view: "queue" | "solutions" | "debug") => void
   credits: number
+  currentLanguage: string
+  setLanguage: (language: string) => void
 }
-const Solutions: React.FC<SolutionsProps> = ({ setView, credits }) => {
+const Solutions: React.FC<SolutionsProps> = ({
+  setView,
+  credits,
+  currentLanguage,
+  setLanguage
+}) => {
   const queryClient = useQueryClient()
   const contentRef = useRef<HTMLDivElement>(null)
 
@@ -143,8 +152,10 @@ const Solutions: React.FC<SolutionsProps> = ({ setView, credits }) => {
   const [isResetting, setIsResetting] = useState(false)
 
   interface Screenshot {
+    id: string
     path: string
     preview: string
+    timestamp: number
   }
 
   const [extraScreenshots, setExtraScreenshots] = useState<Screenshot[]>([])
@@ -153,7 +164,14 @@ const Solutions: React.FC<SolutionsProps> = ({ setView, credits }) => {
     const fetchScreenshots = async () => {
       try {
         const existing = await window.electronAPI.getScreenshots()
-        setExtraScreenshots(existing)
+        const screenshots =
+          existing.previews?.map((p) => ({
+            id: p.path,
+            path: p.path,
+            preview: p.preview,
+            timestamp: Date.now()
+          })) || []
+        setExtraScreenshots(screenshots)
       } catch (error) {
         console.error("Error loading extra screenshots:", error)
         setExtraScreenshots([])
@@ -161,7 +179,7 @@ const Solutions: React.FC<SolutionsProps> = ({ setView, credits }) => {
     }
 
     fetchScreenshots()
-  }, [solutionData]) // Refetch when solution data changes
+  }, [solutionData])
 
   const { showToast } = useToast()
 
@@ -193,7 +211,14 @@ const Solutions: React.FC<SolutionsProps> = ({ setView, credits }) => {
       window.electronAPI.onScreenshotTaken(async () => {
         try {
           const existing = await window.electronAPI.getScreenshots()
-          setExtraScreenshots(existing)
+          const screenshots =
+            existing.previews?.map((p) => ({
+              id: p.path,
+              path: p.path,
+              preview: p.preview,
+              timestamp: Date.now()
+            })) || []
+          setExtraScreenshots(screenshots)
         } catch (error) {
           console.error("Error loading extra screenshots:", error)
         }
@@ -271,9 +296,17 @@ const Solutions: React.FC<SolutionsProps> = ({ setView, credits }) => {
         const fetchScreenshots = async () => {
           try {
             const existing = await window.electronAPI.getScreenshots()
-            setExtraScreenshots(existing)
+            const screenshots =
+              existing.previews?.map((p) => ({
+                id: p.path,
+                path: p.path,
+                preview: p.preview,
+                timestamp: Date.now()
+              })) || []
+            setExtraScreenshots(screenshots)
           } catch (error) {
             console.error("Error loading extra screenshots:", error)
+            setExtraScreenshots([])
           }
         }
         fetchScreenshots()
@@ -367,7 +400,14 @@ const Solutions: React.FC<SolutionsProps> = ({ setView, credits }) => {
       if (response.success) {
         // Fetch and update screenshots after successful deletion
         const existing = await window.electronAPI.getScreenshots()
-        setExtraScreenshots(existing)
+        const screenshots =
+          existing.previews?.map((p) => ({
+            id: p.path,
+            path: p.path,
+            preview: p.preview,
+            timestamp: Date.now()
+          })) || []
+        setExtraScreenshots(screenshots)
       } else {
         console.error("Failed to delete extra screenshot:", response.error)
         showToast("Error", "Failed to delete the screenshot", "error")
@@ -384,6 +424,8 @@ const Solutions: React.FC<SolutionsProps> = ({ setView, credits }) => {
         <Debug
           isProcessing={debugProcessing}
           setIsProcessing={setDebugProcessing}
+          currentLanguage={currentLanguage}
+          setLanguage={setLanguage}
         />
       ) : (
         <div ref={contentRef} className="relative space-y-3 px-4 py-3">
@@ -406,9 +448,10 @@ const Solutions: React.FC<SolutionsProps> = ({ setView, credits }) => {
           <SolutionCommands
             onTooltipVisibilityChange={handleTooltipVisibilityChange}
             isProcessing={!problemStatementData || !solutionData}
-            screenshots={extraScreenshots}
             extraScreenshots={extraScreenshots}
             credits={credits}
+            currentLanguage={currentLanguage}
+            setLanguage={setLanguage}
           />
 
           {/* Main Content - Modified width constraints */}
@@ -431,10 +474,17 @@ const Solutions: React.FC<SolutionsProps> = ({ setView, credits }) => {
                     )}
                   </>
                 )}
+
                 {solutionData && (
                   <>
                     <ContentSection
-                      title="Thoughts (Read these aloud)"
+                      title="Problem Statement"
+                      content={problemStatementData?.problem_statement}
+                      isLoading={!problemStatementData}
+                    />
+
+                    <ContentSection
+                      title="My Thoughts"
                       content={
                         thoughtsData && (
                           <div className="space-y-3">
@@ -459,7 +509,9 @@ const Solutions: React.FC<SolutionsProps> = ({ setView, credits }) => {
                       title="Solution"
                       content={solutionData}
                       isLoading={!solutionData}
+                      currentLanguage={currentLanguage}
                     />
+
                     <ComplexitySection
                       timeComplexity={timeComplexityData}
                       spaceComplexity={spaceComplexityData}

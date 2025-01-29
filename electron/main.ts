@@ -423,9 +423,10 @@ function moveWindowVertical(updateFn: (y: number) => number): void {
   if (!state.mainWindow) return
 
   const newY = updateFn(state.currentY)
-  // Allow window to go halfway off screen in both directions
-  const maxUpLimit = -(state.windowSize?.height || 0) / 2
-  const maxDownLimit = state.screenHeight - (state.windowSize?.height || 0) / 2
+  // Allow window to go 2/3 off screen in either direction
+  const maxUpLimit = (-(state.windowSize?.height || 0) * 2) / 3
+  const maxDownLimit =
+    state.screenHeight + ((state.windowSize?.height || 0) * 2) / 3
 
   // Log the current state and limits
   console.log({

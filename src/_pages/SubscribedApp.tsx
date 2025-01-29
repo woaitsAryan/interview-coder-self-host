@@ -7,9 +7,15 @@ import { useToast } from "../contexts/toast"
 
 interface SubscribedAppProps {
   credits: number
+  currentLanguage: string
+  setLanguage: (language: string) => void
 }
 
-const SubscribedApp: React.FC<SubscribedAppProps> = ({ credits }) => {
+const SubscribedApp: React.FC<SubscribedAppProps> = ({
+  credits,
+  currentLanguage,
+  setLanguage
+}) => {
   const queryClient = useQueryClient()
   const [view, setView] = useState<"queue" | "solutions" | "debug">("queue")
   const containerRef = useRef<HTMLDivElement>(null)
@@ -121,9 +127,19 @@ const SubscribedApp: React.FC<SubscribedAppProps> = ({ credits }) => {
   return (
     <div ref={containerRef} className="min-h-0">
       {view === "queue" ? (
-        <Queue setView={setView} credits={credits} />
+        <Queue
+          setView={setView}
+          credits={credits}
+          currentLanguage={currentLanguage}
+          setLanguage={setLanguage}
+        />
       ) : view === "solutions" ? (
-        <Solutions setView={setView} credits={credits} />
+        <Solutions
+          setView={setView}
+          credits={credits}
+          currentLanguage={currentLanguage}
+          setLanguage={setLanguage}
+        />
       ) : null}
     </div>
   )

@@ -4,6 +4,7 @@ import { ScreenshotHelper } from "./ScreenshotHelper"
 import { IProcessingHelperDeps } from "./main"
 import axios from "axios"
 import { app } from "electron"
+import { BrowserWindow } from "electron"
 
 const isDev = !app.isPackaged
 const API_BASE_URL = isDev
@@ -23,17 +24,33 @@ export class ProcessingHelper {
     this.screenshotHelper = deps.getScreenshotHelper()
   }
 
+  private async waitForInitialization(
+    mainWindow: BrowserWindow
+  ): Promise<void> {
+    let attempts = 0
+    const maxAttempts = 50 // 5 seconds total
+
+    while (attempts < maxAttempts) {
+      const isInitialized = await mainWindow.webContents.executeJavaScript(
+        "window.__IS_INITIALIZED__"
+      )
+      if (isInitialized) return
+      await new Promise((resolve) => setTimeout(resolve, 100))
+      attempts++
+    }
+    throw new Error("App failed to initialize after 5 seconds")
+  }
+
   private async getCredits(): Promise<number> {
     const mainWindow = this.deps.getMainWindow()
     if (!mainWindow) return 0
 
     try {
-      // Get credits directly from window.__CREDITS__ which is now guaranteed to be set correctly
+      await this.waitForInitialization(mainWindow)
       const credits = await mainWindow.webContents.executeJavaScript(
         "window.__CREDITS__"
       )
 
-      // Simple validation
       if (
         typeof credits !== "number" ||
         credits === undefined ||
@@ -47,6 +64,32 @@ export class ProcessingHelper {
     } catch (error) {
       console.error("Error getting credits:", error)
       return 0
+    }
+  }
+
+  private async getLanguage(): Promise<string> {
+    const mainWindow = this.deps.getMainWindow()
+    if (!mainWindow) return "python"
+
+    try {
+      await this.waitForInitialization(mainWindow)
+      const language = await mainWindow.webContents.executeJavaScript(
+        "window.__LANGUAGE__"
+      )
+
+      if (
+        typeof language !== "string" ||
+        language === undefined ||
+        language === null
+      ) {
+        console.warn("Language not properly initialized")
+        return "python"
+      }
+
+      return language
+    } catch (error) {
+      console.error("Error getting language:", error)
+      return "python"
     }
   }
 
@@ -215,18 +258,19 @@ export class ProcessingHelper {
       try {
         const imageDataList = screenshots.map((screenshot) => screenshot.data)
         const mainWindow = this.deps.getMainWindow()
+        const language = await this.getLanguage()
         let problemInfo
 
         // First API call - extract problem info
         try {
           const extractResponse = await axios.post(
             `${API_BASE_URL}/api/extract`,
-            { imageDataList },
+            { imageDataList, language },
             {
               signal,
-              timeout: 300000, // 300 second timeout
+              timeout: 300000,
               validateStatus: function (status) {
-                return status < 500 // Reject if the status code is >= 500
+                return status < 500
               },
               maxRedirects: 5,
               headers: {
@@ -327,13 +371,15 @@ export class ProcessingHelper {
   private async generateSolutionsHelper(signal: AbortSignal) {
     try {
       const problemInfo = this.deps.getProblemInfo()
+      const language = await this.getLanguage()
+
       if (!problemInfo) {
         throw new Error("No problem info available")
       }
 
       const response = await axios.post(
         `${API_BASE_URL}/api/generate`,
-        problemInfo,
+        { ...problemInfo, language },
         {
           signal,
           timeout: 300000,
@@ -405,15 +451,16 @@ export class ProcessingHelper {
   ) {
     try {
       const imageDataList = screenshots.map((screenshot) => screenshot.data)
-
       const problemInfo = this.deps.getProblemInfo()
+      const language = await this.getLanguage()
+
       if (!problemInfo) {
         throw new Error("No problem info available")
       }
 
       const response = await axios.post(
         `${API_BASE_URL}/api/debug`,
-        { imageDataList, problemInfo },
+        { imageDataList, problemInfo, language },
         {
           signal,
           timeout: 300000,

@@ -16,12 +16,15 @@ import { Screenshot } from "../types/screenshots"
 import { ComplexitySection, ContentSection } from "./Solutions"
 
 const CodeSection = ({
+  title,
   code,
-  isLoading
+  isLoading,
+  currentLanguage
 }: {
   title: string
   code: React.ReactNode
   isLoading: boolean
+  currentLanguage: string
 }) => (
   <div className="space-y-2">
     <h2 className="text-[13px] font-medium text-white tracking-wide"></h2>
@@ -37,7 +40,7 @@ const CodeSection = ({
       <div className="w-full">
         <SyntaxHighlighter
           showLineNumbers
-          language="python"
+          language={currentLanguage == "golang" ? "go" : currentLanguage}
           style={dracula}
           customStyle={{
             maxWidth: "100%",
@@ -59,7 +62,14 @@ const CodeSection = ({
 async function fetchScreenshots(): Promise<Screenshot[]> {
   try {
     const existing = await window.electronAPI.getScreenshots()
-    return existing
+    return (
+      existing.previews?.map((p) => ({
+        id: p.path,
+        path: p.path,
+        preview: p.preview,
+        timestamp: Date.now()
+      })) || []
+    )
   } catch (error) {
     console.error("Error loading screenshots:", error)
     throw error
@@ -69,9 +79,16 @@ async function fetchScreenshots(): Promise<Screenshot[]> {
 interface DebugProps {
   isProcessing: boolean
   setIsProcessing: (isProcessing: boolean) => void
+  currentLanguage: string
+  setLanguage: (language: string) => void
 }
 
-const Debug: React.FC<DebugProps> = ({ isProcessing, setIsProcessing }) => {
+const Debug: React.FC<DebugProps> = ({
+  isProcessing,
+  setIsProcessing,
+  currentLanguage,
+  setLanguage
+}) => {
   const [tooltipVisible, setTooltipVisible] = useState(false)
   const [tooltipHeight, setTooltipHeight] = useState(0)
 
@@ -231,6 +248,10 @@ const Debug: React.FC<DebugProps> = ({ isProcessing, setIsProcessing }) => {
         screenshots={screenshots}
         onTooltipVisibilityChange={handleTooltipVisibilityChange}
         isProcessing={isProcessing}
+        extraScreenshots={screenshots}
+        credits={window.__CREDITS__}
+        currentLanguage={currentLanguage}
+        setLanguage={setLanguage}
       />
 
       {/* Main Content */}
@@ -258,7 +279,12 @@ const Debug: React.FC<DebugProps> = ({ isProcessing, setIsProcessing }) => {
             />
 
             {/* Code Section */}
-            <CodeSection code={newCode} isLoading={!newCode} />
+            <CodeSection
+              title="Solution"
+              code={newCode}
+              isLoading={!newCode}
+              currentLanguage={currentLanguage}
+            />
 
             {/* Complexity Section */}
             <ComplexitySection

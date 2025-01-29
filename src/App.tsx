@@ -7,7 +7,7 @@ import {
   QueryClientProvider,
   useQueryClient
 } from "@tanstack/react-query"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { User } from "@supabase/supabase-js"
 import {
   Toast,
@@ -44,16 +44,35 @@ function App() {
     variant: "neutral"
   })
   const [credits, setCredits] = useState<number>(0)
+  const [currentLanguage, setCurrentLanguage] = useState<string>("python")
+  const [isInitialized, setIsInitialized] = useState(false)
+
+  // Helper function to safely update credits
+  const updateCredits = useCallback((newCredits: number) => {
+    setCredits(newCredits)
+    window.__CREDITS__ = newCredits
+  }, [])
+
+  // Helper function to safely update language
+  const updateLanguage = useCallback((newLanguage: string) => {
+    setCurrentLanguage(newLanguage)
+    window.__LANGUAGE__ = newLanguage
+  }, [])
+
+  // Helper function to mark initialization complete
+  const markInitialized = useCallback(() => {
+    setIsInitialized(true)
+    window.__IS_INITIALIZED__ = true
+  }, [])
 
   // Show toast method
-  const showToast = (
-    title: string,
-    description: string,
-    variant: ToastVariant
-  ) => {
-    setToastMessage({ title, description, variant })
-    setToastOpen(true)
-  }
+  const showToast = useCallback(
+    (title: string, description: string, variant: ToastVariant) => {
+      setToastMessage({ title, description, variant })
+      setToastOpen(true)
+    },
+    []
+  )
 
   // Listen for PKCE code callback
   useEffect(() => {
@@ -89,44 +108,28 @@ function App() {
     }
   }, [])
 
-  // Fetch initial credits and subscribe to changes
+  // Handle credits initialization and updates
   useEffect(() => {
-    const fetchCredits = async () => {
+    const initializeAndSubscribe = async () => {
       const {
         data: { user }
       } = await supabase.auth.getUser()
       if (!user) return
 
+      // Initial fetch
       const { data: subscription } = await supabase
         .from("subscriptions")
-        .select("credits")
+        .select("credits, preferred_language")
         .eq("user_id", user.id)
         .single()
 
       if (subscription) {
-        console.log("Setting initial credits:", subscription.credits)
-        setCredits(subscription.credits)
-        window.__CREDITS__ = subscription.credits
-        // Ensure the value is set
-        const verifyCredits = await window.electronAPI.getCredits()
-        console.log("Verified credits value:", verifyCredits)
+        updateCredits(subscription.credits)
+        updateLanguage(subscription.preferred_language || "python")
+        markInitialized()
       }
-    }
 
-    fetchCredits()
-
-    // Get current user ID for subscription filter
-    const getCurrentUserId = async () => {
-      const {
-        data: { user }
-      } = await supabase.auth.getUser()
-      return user?.id
-    }
-
-    // Subscribe to credits changes
-    getCurrentUserId().then((userId) => {
-      if (!userId) return
-
+      // Subscribe to changes
       const channel = supabase
         .channel("credits")
         .on(
@@ -135,66 +138,76 @@ function App() {
             event: "UPDATE",
             schema: "public",
             table: "subscriptions",
-            filter: `user_id=eq.${userId}`
+            filter: `user_id=eq.${user.id}`
           },
           (payload) => {
             const newCredits = payload.new.credits
-            console.log("Credits updated from subscription:", newCredits)
-            setCredits(newCredits)
-            window.__CREDITS__ = newCredits
+            updateCredits(newCredits)
           }
         )
         .subscribe()
 
-      return () => {
-        channel.unsubscribe()
-      }
-    })
-  }, [])
+      // Listen for solution success to decrement credits
+      const unsubscribeSolutionSuccess = window.electronAPI.onSolutionSuccess(
+        async () => {
+          // Get current credits before updating
+          const { data: currentSubscription } = await supabase
+            .from("subscriptions")
+            .select("credits")
+            .eq("user_id", user.id)
+            .single()
 
-  // Listen for processing events to update credits
-  useEffect(() => {
-    const cleanupFunctions = [
-      window.electronAPI.onSolutionSuccess(async () => {
-        const {
-          data: { user }
-        } = await supabase.auth.getUser()
-        if (!user) return
+          if (!currentSubscription) {
+            console.error(
+              "No subscription found when trying to decrement credits"
+            )
+            return
+          }
 
-        // Decrement credits
-        const { data: subscription, error } = await supabase
-          .from("subscriptions")
-          .update({ credits: credits - 1 })
-          .eq("user_id", user.id)
-          .select("credits")
-          .single()
+          const { data: updatedSubscription, error } = await supabase
+            .from("subscriptions")
+            .update({ credits: currentSubscription.credits - 1 })
+            .eq("user_id", user.id)
+            .select("credits")
+            .single()
 
-        if (error) {
-          console.error("Error updating credits:", error)
-          return
+          if (error) {
+            console.error("Error updating credits:", error)
+            return
+          }
+
+          updateCredits(updatedSubscription.credits)
         }
+      )
 
-        setCredits(subscription.credits)
-        window.__CREDITS__ = subscription.credits
-      }),
-
-      window.electronAPI.onOutOfCredits(() => {
+      // Listen for out of credits notification
+      const unsubscribeOutOfCredits = window.electronAPI.onOutOfCredits(() => {
         showToast(
           "Out of Credits",
           "You are out of credits. Please refill at https://www.interviewcoder.co/settings.",
           "error"
         )
       })
-    ]
 
-    return () => cleanupFunctions.forEach((cleanup) => cleanup())
-  }, [credits, showToast])
+      // Cleanup function
+      return () => {
+        channel.unsubscribe()
+        unsubscribeSolutionSuccess()
+        unsubscribeOutOfCredits()
+        // Reset initialization state on cleanup
+        window.__IS_INITIALIZED__ = false
+        setIsInitialized(false)
+      }
+    }
+
+    initializeAndSubscribe()
+  }, [updateCredits, updateLanguage, markInitialized, showToast])
 
   return (
     <QueryClientProvider client={queryClient}>
       <ToastProvider>
         <ToastContext.Provider value={{ showToast }}>
-          <AppContent />
+          <AppContent isInitialized={isInitialized} />
           <UpdateNotification />
           <Toast
             open={toastOpen}
@@ -456,12 +469,13 @@ function AuthForm() {
 }
 
 // Main App component that handles conditional rendering based on auth and subscription state
-function AppContent() {
+function AppContent({ isInitialized }: { isInitialized: boolean }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [subscriptionLoading, setSubscriptionLoading] = useState(false)
   const [isSubscribed, setIsSubscribed] = useState(false)
   const [credits, setCredits] = useState<number>(0)
+  const [currentLanguage, setCurrentLanguage] = useState<string>("python")
   const queryClient = useQueryClient()
 
   // Check auth state on mount
@@ -482,6 +496,7 @@ function AppContent() {
       if (!user?.id) {
         setIsSubscribed(false)
         setCredits(0)
+        setCurrentLanguage("python")
         return
       }
 
@@ -489,15 +504,17 @@ function AppContent() {
       try {
         const { data: subscription } = await supabase
           .from("subscriptions")
-          .select("*, credits")
+          .select("*, credits, preferred_language")
           .eq("user_id", user.id)
           .maybeSingle()
 
         setIsSubscribed(!!subscription)
         if (subscription?.credits !== undefined) {
           setCredits(subscription.credits)
-          // Only set window.__CREDITS__ after we're sure we have the correct value
-          window.__CREDITS__ = subscription.credits
+        }
+        if (subscription?.preferred_language) {
+          setCurrentLanguage(subscription.preferred_language)
+          window.__LANGUAGE__ = subscription.preferred_language
         }
       } finally {
         setSubscriptionLoading(false)
@@ -532,7 +549,7 @@ function AppContent() {
             console.log("Checking current subscription and credits status...")
             const { data: subscription } = await supabase
               .from("subscriptions")
-              .select("*, credits")
+              .select("*, credits, preferred_language")
               .eq("user_id", user?.id)
               .maybeSingle()
 
@@ -540,10 +557,12 @@ function AppContent() {
             setIsSubscribed(!!subscription)
             if (subscription?.credits !== undefined) {
               setCredits(subscription.credits)
-              window.__CREDITS__ = subscription.credits
             } else {
               setCredits(0)
-              window.__CREDITS__ = 0
+            }
+            if (subscription?.preferred_language) {
+              setCurrentLanguage(subscription.preferred_language)
+              window.__LANGUAGE__ = subscription.preferred_language
             }
             await queryClient.invalidateQueries({ queryKey: ["user"] })
           }
@@ -557,31 +576,32 @@ function AppContent() {
             setIsSubscribed(true)
             const newCredits = payload.new.credits ?? 0
             setCredits(newCredits)
-            window.__CREDITS__ = newCredits
+            if (payload.new.preferred_language) {
+              setCurrentLanguage(payload.new.preferred_language)
+              window.__LANGUAGE__ = payload.new.preferred_language
+            }
             await queryClient.invalidateQueries({ queryKey: ["user"] })
           }
         }
       )
-      .subscribe((status) => {
-        console.log("Channel status changed to:", status)
-        if (status === "SUBSCRIBED") {
-          console.log("Successfully subscribed to changes for user:", user?.id)
-        }
-      })
+      .subscribe()
 
     return () => {
-      console.log("Cleaning up subscription and credits listener")
       channel.unsubscribe()
     }
   }, [user?.id, queryClient])
 
-  if (loading || (user && subscriptionLoading)) {
+  if (loading || (user && (subscriptionLoading || !isInitialized))) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <div className="w-6 h-6 border-2 border-white/20 border-t-white/80 rounded-full animate-spin"></div>
           <p className="text-white/60 text-sm">
-            {loading ? "Loading..." : "Checking subscription..."}
+            {loading
+              ? "Loading..."
+              : !isInitialized
+              ? "Initializing..."
+              : "Checking subscription..."}
           </p>
         </div>
       </div>
@@ -611,7 +631,13 @@ function AppContent() {
   }
 
   // If logged in and subscribed with credits loaded, show the app
-  return <SubscribedApp credits={credits} />
+  return (
+    <SubscribedApp
+      credits={credits}
+      currentLanguage={currentLanguage}
+      setLanguage={setCurrentLanguage}
+    />
+  )
 }
 
 export default App

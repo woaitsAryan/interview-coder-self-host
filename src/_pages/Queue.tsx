@@ -16,10 +16,19 @@ async function fetchScreenshots(): Promise<Screenshot[]> {
   }
 }
 
-const Queue: React.FC<{
+interface QueueProps {
   setView: (view: "queue" | "solutions" | "debug") => void
   credits: number
-}> = ({ setView, credits }) => {
+  currentLanguage: string
+  setLanguage: (language: string) => void
+}
+
+const Queue: React.FC<QueueProps> = ({
+  setView,
+  credits,
+  currentLanguage,
+  setLanguage
+}) => {
   const { showToast } = useToast()
 
   const [isTooltipVisible, setIsTooltipVisible] = useState(false)
@@ -135,6 +144,8 @@ const Queue: React.FC<{
             onTooltipVisibilityChange={handleTooltipVisibilityChange}
             screenshotCount={screenshots.length}
             credits={credits}
+            currentLanguage={currentLanguage}
+            setLanguage={setLanguage}
           />
         </div>
       </div>

@@ -49,9 +49,7 @@ interface ElectronAPI {
   installUpdate: () => void
   onUpdateAvailable: (callback: (info: any) => void) => () => void
   onUpdateDownloaded: (callback: (info: any) => void) => () => void
-  getCredits: () => Promise<number>
   decrementCredits: () => Promise<void>
-  setInitialCredits: (credits: number) => Promise<void>
   onCreditsUpdated: (callback: (credits: number) => void) => () => void
   onOutOfCredits: (callback: () => void) => () => void
 }
@@ -244,10 +242,7 @@ const electronAPI = {
       ipcRenderer.removeListener("update-downloaded", subscription)
     }
   },
-  getCredits: () => ipcRenderer.invoke("get-credits"),
   decrementCredits: () => ipcRenderer.invoke("decrement-credits"),
-  setInitialCredits: (credits: number) =>
-    ipcRenderer.invoke("set-initial-credits", credits),
   onCreditsUpdated: (callback: (credits: number) => void) => {
     const subscription = (_event: any, credits: number) => callback(credits)
     ipcRenderer.on("credits-updated", subscription)

@@ -44,11 +44,12 @@ export interface ElectronAPI {
   installUpdate: () => void
   onUpdateAvailable: (callback: (info: any) => void) => () => void
   onUpdateDownloaded: (callback: (info: any) => void) => () => void
-  getCredits: () => Promise<number>
+
   decrementCredits: () => Promise<void>
   setInitialCredits: (credits: number) => Promise<void>
   onCreditsUpdated: (callback: (credits: number) => void) => () => void
   onOutOfCredits: (callback: () => void) => () => void
+  openSettingsPortal: () => Promise<void>
 }
 
 declare global {

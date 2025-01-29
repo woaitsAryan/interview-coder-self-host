@@ -65,8 +65,11 @@ interface Window {
   electronAPI: ElectronAPI
   electron: {
     ipcRenderer: {
-      on: (channel: string, func: (...args: any[]) => void) => void
-      removeListener: (channel: string, func: (...args: any[]) => void) => void
+      on(channel: string, func: (...args: any[]) => void): void
+      removeListener(channel: string, func: (...args: any[]) => void): void
     }
   }
+  __CREDITS__: number
+  __LANGUAGE__: string
+  __IS_INITIALIZED__: boolean
 }

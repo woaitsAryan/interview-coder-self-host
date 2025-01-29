@@ -2,17 +2,22 @@ import React, { useState, useEffect, useRef } from "react"
 
 import { supabase } from "../../lib/supabase"
 import { useToast } from "../../contexts/toast"
+import { LanguageSelector } from "../shared/LanguageSelector"
 
 interface QueueCommandsProps {
   onTooltipVisibilityChange: (visible: boolean, height: number) => void
   screenshotCount?: number
   credits: number
+  currentLanguage: string
+  setLanguage: (language: string) => void
 }
 
 const QueueCommands: React.FC<QueueCommandsProps> = ({
   onTooltipVisibilityChange,
   screenshotCount = 0,
-  credits
+  credits,
+  currentLanguage,
+  setLanguage
 }) => {
   const [isTooltipVisible, setIsTooltipVisible] = useState(false)
   const tooltipRef = useRef<HTMLDivElement>(null)
@@ -312,6 +317,11 @@ const QueueCommands: React.FC<QueueCommandsProps> = ({
 
                     {/* Separator and Log Out */}
                     <div className="pt-3 mt-3 border-t border-white/10">
+                      <LanguageSelector
+                        currentLanguage={currentLanguage}
+                        setLanguage={setLanguage}
+                      />
+
                       {/* Credits Display */}
                       <div className="mb-3 px-2 space-y-1">
                         <div className="flex items-center justify-between text-[13px] font-medium text-white/90">

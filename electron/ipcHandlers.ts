@@ -17,21 +17,6 @@ export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
   }
 
   // Credits handlers
-  ipcMain.handle("get-credits", async () => {
-    const mainWindow = deps.getMainWindow()
-    if (!mainWindow) return 0
-
-    try {
-      const credits = await mainWindow.webContents.executeJavaScript(
-        "window.__CREDITS__"
-      )
-      return credits ?? 0
-    } catch (error) {
-      console.error("Error getting credits:", error)
-      return 0
-    }
-  })
-
   ipcMain.handle("set-initial-credits", async (_event, credits: number) => {
     const mainWindow = deps.getMainWindow()
     if (!mainWindow) return
