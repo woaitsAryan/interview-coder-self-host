@@ -147,17 +147,8 @@ function initializeHelpers() {
           x + state.step
         )
       ),
-    moveWindowUp: () =>
-      moveWindowVertical((y) =>
-        Math.max(-(state.windowSize?.height || 0) / 2, y - state.step)
-      ),
-    moveWindowDown: () =>
-      moveWindowVertical((y) =>
-        Math.min(
-          state.screenHeight - (state.windowSize?.height || 0) / 2,
-          y + state.step
-        )
-      )
+    moveWindowUp: () => moveWindowVertical((y) => y - state.step),
+    moveWindowDown: () => moveWindowVertical((y) => y + state.step)
   } as IShortcutsHelperDeps)
 }
 
@@ -236,12 +227,13 @@ async function createWindow(): Promise<void> {
   const workArea = primaryDisplay.workAreaSize
   state.screenWidth = workArea.width
   state.screenHeight = workArea.height
-  state.step = Math.floor(state.screenWidth / 20)
+  state.step = 40
+  state.currentY = 50
 
   const windowSettings: Electron.BrowserWindowConstructorOptions = {
     height: 600,
     x: state.currentX,
-    y: 0,
+    y: 50,
     alwaysOnTop: true,
     webPreferences: {
       nodeIntegration: false,
@@ -262,7 +254,7 @@ async function createWindow(): Promise<void> {
     type: "panel",
     paintWhenInitiallyHidden: true,
     titleBarStyle: "hidden",
-    enableLargerThanScreen: false,
+    enableLargerThanScreen: true,
     movable: true
   }
 
@@ -305,7 +297,7 @@ async function createWindow(): Promise<void> {
   // Configure window behavior
   state.mainWindow.webContents.setZoomFactor(1)
   if (isDev) {
-    state.mainWindow.webContents.openDevTools()
+    // state.mainWindow.webContents.openDevTools()
   }
   state.mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     console.log("Attempting to open URL:", url)
@@ -429,11 +421,21 @@ function moveWindowHorizontal(updateFn: (x: number) => number): void {
 
 function moveWindowVertical(updateFn: (y: number) => number): void {
   if (!state.mainWindow) return
-  state.currentY = updateFn(state.currentY)
-  state.mainWindow.setPosition(
-    Math.round(state.currentX),
-    Math.round(state.currentY)
-  )
+  console.log("Window height:", state.windowSize?.height)
+  console.log("Current Y:", state.currentY)
+  console.log("Max up limit:", -(state.windowSize?.height || 0) / 2)
+  const newY = updateFn(state.currentY)
+  const maxUpLimit = -(state.windowSize?.height || 0) / 2
+  const maxDownLimit = state.screenHeight - (state.windowSize?.height || 0) / 2
+
+  // Only update if within bounds
+  if (newY >= maxUpLimit && newY <= maxDownLimit) {
+    state.currentY = newY
+    state.mainWindow.setPosition(
+      Math.round(state.currentX),
+      Math.round(state.currentY)
+    )
+  }
 }
 
 // Window dimension functions
@@ -492,17 +494,8 @@ async function initializeApp() {
             x + state.step
           )
         ),
-      moveWindowUp: () =>
-        moveWindowVertical((y) =>
-          Math.max(-(state.windowSize?.height || 0) / 2, y - state.step)
-        ),
-      moveWindowDown: () =>
-        moveWindowVertical((y) =>
-          Math.min(
-            state.screenHeight - (state.windowSize?.height || 0) / 2,
-            y + state.step
-          )
-        )
+      moveWindowUp: () => moveWindowVertical((y) => y - state.step),
+      moveWindowDown: () => moveWindowVertical((y) => y + state.step)
     })
     await createWindow()
     state.shortcutsHelper?.registerGlobalShortcuts()
