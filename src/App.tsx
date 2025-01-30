@@ -114,7 +114,12 @@ function App() {
       const {
         data: { user }
       } = await supabase.auth.getUser()
-      if (!user) return
+      if (!user) {
+        updateCredits(0)
+        updateLanguage("python")
+        markInitialized()
+        return
+      }
 
       // Initial fetch
       const { data: subscription } = await supabase
@@ -123,11 +128,10 @@ function App() {
         .eq("user_id", user.id)
         .single()
 
-      if (subscription) {
-        updateCredits(subscription.credits)
-        updateLanguage(subscription.preferred_language || "python")
-        markInitialized()
-      }
+      // Set defaults if no subscription
+      updateCredits(subscription?.credits ?? 0)
+      updateLanguage(subscription?.preferred_language ?? "python")
+      markInitialized()
 
       // Subscribe to changes
       const channel = supabase
@@ -150,6 +154,12 @@ function App() {
       // Listen for solution success to decrement credits
       const unsubscribeSolutionSuccess = window.electronAPI.onSolutionSuccess(
         async () => {
+          // Wait for initialization before proceeding
+          if (!isInitialized) {
+            console.warn("Attempted to decrement credits before initialization")
+            return
+          }
+
           // Get current credits before updating
           const { data: currentSubscription } = await supabase
             .from("subscriptions")
@@ -180,20 +190,11 @@ function App() {
         }
       )
 
-      // Listen for out of credits notification
-      const unsubscribeOutOfCredits = window.electronAPI.onOutOfCredits(() => {
-        showToast(
-          "Out of Credits",
-          "You are out of credits. Please refill at https://www.interviewcoder.co/settings.",
-          "error"
-        )
-      })
-
       // Cleanup function
       return () => {
         channel.unsubscribe()
         unsubscribeSolutionSuccess()
-        unsubscribeOutOfCredits()
+
         // Reset initialization state on cleanup
         window.__IS_INITIALIZED__ = false
         setIsInitialized(false)
@@ -201,7 +202,7 @@ function App() {
     }
 
     initializeAndSubscribe()
-  }, [updateCredits, updateLanguage, markInitialized, showToast])
+  }, [updateCredits, updateLanguage, markInitialized, showToast, isInitialized])
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -600,7 +601,7 @@ function AppContent({ isInitialized }: { isInitialized: boolean }) {
             {loading
               ? "Loading..."
               : !isInitialized
-              ? "Initializing..."
+              ? "Initializing...If you see this screen for more than 10 seconds, please quit and restart the app."
               : "Checking subscription..."}
           </p>
         </div>
