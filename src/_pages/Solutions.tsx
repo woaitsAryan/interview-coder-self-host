@@ -164,13 +164,16 @@ const Solutions: React.FC<SolutionsProps> = ({
     const fetchScreenshots = async () => {
       try {
         const existing = await window.electronAPI.getScreenshots()
-        const screenshots =
-          existing.previews?.map((p) => ({
+        console.log("Raw screenshot data:", existing)
+        const screenshots = (Array.isArray(existing) ? existing : []).map(
+          (p) => ({
             id: p.path,
             path: p.path,
             preview: p.preview,
             timestamp: Date.now()
-          })) || []
+          })
+        )
+        console.log("Processed screenshots:", screenshots)
         setExtraScreenshots(screenshots)
       } catch (error) {
         console.error("Error loading extra screenshots:", error)
@@ -211,13 +214,14 @@ const Solutions: React.FC<SolutionsProps> = ({
       window.electronAPI.onScreenshotTaken(async () => {
         try {
           const existing = await window.electronAPI.getScreenshots()
-          const screenshots =
-            existing.previews?.map((p) => ({
+          const screenshots = (Array.isArray(existing) ? existing : []).map(
+            (p) => ({
               id: p.path,
               path: p.path,
               preview: p.preview,
               timestamp: Date.now()
-            })) || []
+            })
+          )
           setExtraScreenshots(screenshots)
         } catch (error) {
           console.error("Error loading extra screenshots:", error)
@@ -400,13 +404,14 @@ const Solutions: React.FC<SolutionsProps> = ({
       if (response.success) {
         // Fetch and update screenshots after successful deletion
         const existing = await window.electronAPI.getScreenshots()
-        const screenshots =
-          existing.previews?.map((p) => ({
+        const screenshots = (Array.isArray(existing) ? existing : []).map(
+          (p) => ({
             id: p.path,
             path: p.path,
             preview: p.preview,
             timestamp: Date.now()
-          })) || []
+          })
+        )
         setExtraScreenshots(screenshots)
       } else {
         console.error("Failed to delete extra screenshot:", response.error)

@@ -62,14 +62,13 @@ const CodeSection = ({
 async function fetchScreenshots(): Promise<Screenshot[]> {
   try {
     const existing = await window.electronAPI.getScreenshots()
-    return (
-      existing.previews?.map((p) => ({
-        id: p.path,
-        path: p.path,
-        preview: p.preview,
-        timestamp: Date.now()
-      })) || []
-    )
+    console.log("Raw screenshot data in Debug:", existing)
+    return (Array.isArray(existing) ? existing : []).map((p) => ({
+      id: p.path,
+      path: p.path,
+      preview: p.preview,
+      timestamp: Date.now()
+    }))
   } catch (error) {
     console.error("Error loading screenshots:", error)
     throw error

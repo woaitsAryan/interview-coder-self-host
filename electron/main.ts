@@ -297,7 +297,7 @@ async function createWindow(): Promise<void> {
   // Configure window behavior
   state.mainWindow.webContents.setZoomFactor(1)
   if (isDev) {
-    // state.mainWindow.webContents.openDevTools()
+    state.mainWindow.webContents.openDevTools()
   }
   state.mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     console.log("Attempting to open URL:", url)
