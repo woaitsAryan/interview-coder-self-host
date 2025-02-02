@@ -375,12 +375,13 @@ function hideMainWindow(): void {
     state.windowPosition = { x: bounds.x, y: bounds.y }
     state.windowSize = { width: bounds.width, height: bounds.height }
     state.mainWindow.setIgnoreMouseEvents(true, { forward: true })
-    state.mainWindow.setFocusable(false)
+    state.mainWindow.setAlwaysOnTop(true, "floating", 1)
+    state.mainWindow.setVisibleOnAllWorkspaces(true, {
+      visibleOnFullScreen: true
+    })
     state.mainWindow.setOpacity(0)
     state.mainWindow.hide()
     state.isWindowVisible = false
-    // Ensure we don't steal focus when hiding
-    app.hide()
   }
 }
 
@@ -393,15 +394,15 @@ function showMainWindow(): void {
       })
     }
     state.mainWindow.setIgnoreMouseEvents(false)
-    state.mainWindow.setFocusable(true)
+    state.mainWindow.setAlwaysOnTop(true, "floating", 1)
+    state.mainWindow.setVisibleOnAllWorkspaces(true, {
+      visibleOnFullScreen: true
+    })
+    state.mainWindow.setContentProtection(true)
     state.mainWindow.setOpacity(0)
-    state.mainWindow.show()
-    state.mainWindow.setOpacity(1)
-    // Use showInactive to prevent stealing focus
     state.mainWindow.showInactive()
+    state.mainWindow.setOpacity(1)
     state.isWindowVisible = true
-    // Ensure we don't activate the app
-    app.hide()
   }
 }
 
