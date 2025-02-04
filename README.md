@@ -110,9 +110,7 @@ bun install
 1. Start the development server:
 
 ```bash
-npm run app:dev
-# or
-bun run app:dev
+npm run dev
 ```
 
 This will:
