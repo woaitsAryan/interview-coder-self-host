@@ -115,7 +115,7 @@ function App() {
         data: { user }
       } = await supabase.auth.getUser()
       if (!user) {
-        updateCredits(0)
+        updateCredits(1)
         updateLanguage("python")
         markInitialized()
         return
@@ -129,7 +129,7 @@ function App() {
         .single()
 
       // Set defaults if no subscription
-      updateCredits(subscription?.credits ?? 0)
+      updateCredits(subscription?.credits ?? 1)
       updateLanguage(subscription?.preferred_language ?? "python")
       markInitialized()
 
@@ -475,7 +475,7 @@ function AppContent({ isInitialized }: { isInitialized: boolean }) {
   const [loading, setLoading] = useState(true)
   const [subscriptionLoading, setSubscriptionLoading] = useState(false)
   const [isSubscribed, setIsSubscribed] = useState(false)
-  const [credits, setCredits] = useState<number>(0)
+  const [credits, setCredits] = useState<number | undefined>(undefined)
   const [currentLanguage, setCurrentLanguage] = useState<string>("python")
   const queryClient = useQueryClient()
 
@@ -510,9 +510,7 @@ function AppContent({ isInitialized }: { isInitialized: boolean }) {
           .maybeSingle()
 
         setIsSubscribed(!!subscription)
-        if (subscription?.credits !== undefined) {
-          setCredits(subscription.credits)
-        }
+        setCredits(subscription?.credits ?? 0)
         if (subscription?.preferred_language) {
           setCurrentLanguage(subscription.preferred_language)
           window.__LANGUAGE__ = subscription.preferred_language
@@ -556,11 +554,7 @@ function AppContent({ isInitialized }: { isInitialized: boolean }) {
 
             console.log("Current subscription check result:", subscription)
             setIsSubscribed(!!subscription)
-            if (subscription?.credits !== undefined) {
-              setCredits(subscription.credits)
-            } else {
-              setCredits(0)
-            }
+            setCredits(subscription?.credits ?? 0)
             if (subscription?.preferred_language) {
               setCurrentLanguage(subscription.preferred_language)
               window.__LANGUAGE__ = subscription.preferred_language
@@ -575,8 +569,7 @@ function AppContent({ isInitialized }: { isInitialized: boolean }) {
           ) {
             console.log("New subscription detected")
             setIsSubscribed(true)
-            const newCredits = payload.new.credits ?? 0
-            setCredits(newCredits)
+            setCredits(payload.new.credits ?? 0)
             if (payload.new.preferred_language) {
               setCurrentLanguage(payload.new.preferred_language)
               window.__LANGUAGE__ = payload.new.preferred_language
@@ -592,7 +585,11 @@ function AppContent({ isInitialized }: { isInitialized: boolean }) {
     }
   }, [user?.id, queryClient])
 
-  if (loading || (user && (subscriptionLoading || !isInitialized))) {
+  // Show loading state while checking auth, subscription, initialization, or credits
+  if (
+    loading ||
+    (user && (subscriptionLoading || !isInitialized || credits === undefined))
+  ) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
@@ -602,6 +599,8 @@ function AppContent({ isInitialized }: { isInitialized: boolean }) {
               ? "Loading..."
               : !isInitialized
               ? "Initializing...If you see this screen for more than 10 seconds, please quit and restart the app."
+              : credits === undefined
+              ? "Loading credits..."
               : "Checking subscription..."}
           </p>
         </div>
@@ -619,22 +618,10 @@ function AppContent({ isInitialized }: { isInitialized: boolean }) {
     return <SubscribePage user={user} />
   }
 
-  // If logged in and subscribed but credits aren't loaded yet, keep showing loading
-  if (credits === undefined) {
-    return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-6 h-6 border-2 border-white/20 border-t-white/80 rounded-full animate-spin"></div>
-          <p className="text-white/60 text-sm">Loading credits...</p>
-        </div>
-      </div>
-    )
-  }
-
   // If logged in and subscribed with credits loaded, show the app
   return (
     <SubscribedApp
-      credits={credits}
+      credits={credits!}
       currentLanguage={currentLanguage}
       setLanguage={setCurrentLanguage}
     />
