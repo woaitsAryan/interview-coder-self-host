@@ -47,6 +47,7 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
           <option value="java">Java</option>
           <option value="golang">Go</option>
           <option value="cpp">C++</option>
+          <option value="swift">Swift</option>
           <option value="kotlin">Kotlin</option>
         </select>
       </div>

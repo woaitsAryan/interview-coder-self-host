@@ -169,24 +169,7 @@ export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
   })
   ipcMain.handle("open-subscription-portal", async (_event, authData) => {
     try {
-      const token = randomBytes(32).toString("hex")
-      const supabase = createSupabaseClient()
-      const { error } = await supabase.from("auth_tokens").insert({
-        user_id: authData.id,
-        token: token,
-        expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString()
-      })
-
-      if (error) {
-        console.error("Database error:", error)
-        throw new Error("Failed to create auth token")
-      }
-
-      const isDev = process.env.NODE_ENV === "development"
-      const url = isDev
-        ? `https://www.interviewcoder.co/checkout?token=${token}`
-        : `https://www.interviewcoder.co/checkout?token=${token}`
-
+      const url = "https://www.interviewcoder.co/checkout"
       await shell.openExternal(url)
       return { success: true }
     } catch (error) {
