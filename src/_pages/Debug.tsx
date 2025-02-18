@@ -5,15 +5,9 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
 import { dracula } from "react-syntax-highlighter/dist/esm/styles/prism"
 import ScreenshotQueue from "../components/Queue/ScreenshotQueue"
 import SolutionCommands from "../components/Solutions/SolutionCommands"
-import {
-  Toast,
-  ToastDescription,
-  ToastMessage,
-  ToastTitle,
-  ToastVariant
-} from "../components/ui/toast"
 import { Screenshot } from "../types/screenshots"
 import { ComplexitySection, ContentSection } from "./Solutions"
+import { useToast } from "../contexts/toast"
 
 const CodeSection = ({
   title,
@@ -90,6 +84,7 @@ const Debug: React.FC<DebugProps> = ({
 }) => {
   const [tooltipVisible, setTooltipVisible] = useState(false)
   const [tooltipHeight, setTooltipHeight] = useState(0)
+  const { showToast } = useToast()
 
   const { data: screenshots = [], refetch } = useQuery<Screenshot[]>({
     queryKey: ["screenshots"],
@@ -99,7 +94,6 @@ const Debug: React.FC<DebugProps> = ({
     refetchOnWindowFocus: false
   })
 
-  const [oldCode, setOldCode] = useState<string | null>(null)
   const [newCode, setNewCode] = useState<string | null>(null)
   const [thoughtsData, setThoughtsData] = useState<string[] | null>(null)
   const [timeComplexityData, setTimeComplexityData] = useState<string | null>(
@@ -109,42 +103,8 @@ const Debug: React.FC<DebugProps> = ({
     null
   )
 
-  const [toastOpen, setToastOpen] = useState(false)
-  const [toastMessage, setToastMessage] = useState<ToastMessage>({
-    title: "",
-    description: "",
-    variant: "neutral"
-  })
-
   const queryClient = useQueryClient()
   const contentRef = useRef<HTMLDivElement>(null)
-
-  const showToast = (
-    title: string,
-    description: string,
-    variant: ToastVariant
-  ) => {
-    setToastMessage({ title, description, variant })
-    setToastOpen(true)
-  }
-
-  const handleDeleteExtraScreenshot = async (index: number) => {
-    const screenshotToDelete = screenshots[index]
-
-    try {
-      const response = await window.electronAPI.deleteScreenshot(
-        screenshotToDelete.path
-      )
-
-      if (response.success) {
-        refetch()
-      } else {
-        console.error("Failed to delete extra screenshot:", response.error)
-      }
-    } catch (error) {
-      console.error("Error deleting extra screenshot:", error)
-    }
-  }
 
   useEffect(() => {
     // Try to get the new solution data from cache first
@@ -217,18 +177,26 @@ const Debug: React.FC<DebugProps> = ({
     setTooltipHeight(height)
   }
 
+  const handleDeleteExtraScreenshot = async (index: number) => {
+    const screenshotToDelete = screenshots[index]
+
+    try {
+      const response = await window.electronAPI.deleteScreenshot(
+        screenshotToDelete.path
+      )
+
+      if (response.success) {
+        refetch()
+      } else {
+        console.error("Failed to delete extra screenshot:", response.error)
+      }
+    } catch (error) {
+      console.error("Error deleting extra screenshot:", error)
+    }
+  }
+
   return (
     <div ref={contentRef} className="relative space-y-3 px-4 py-3">
-      <Toast
-        open={toastOpen}
-        onOpenChange={setToastOpen}
-        variant={toastMessage.variant}
-        duration={3000}
-      >
-        <ToastTitle>{toastMessage.title}</ToastTitle>
-        <ToastDescription>{toastMessage.description}</ToastDescription>
-      </Toast>
-
       {/* Conditionally render the screenshot queue */}
       <div className="bg-transparent w-fit">
         <div className="pb-3">

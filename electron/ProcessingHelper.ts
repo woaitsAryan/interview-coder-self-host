@@ -172,7 +172,7 @@ export class ProcessingHelper {
         } else {
           mainWindow.webContents.send(
             this.deps.PROCESSING_EVENTS.INITIAL_SOLUTION_ERROR,
-            error.message || "An unknown error occurred"
+            error.message || "Server error. Please try again."
           )
         }
         // Reset view back to queue on error
@@ -340,7 +340,7 @@ export class ProcessingHelper {
           }
 
           // If we get here, it's an unknown error
-          throw new Error(error.message || "An unknown error occurred")
+          throw new Error(error.message || "Server error. Please try again.")
         }
       } catch (error: any) {
         // Log the full error for debugging

@@ -12,10 +12,8 @@ import { User } from "@supabase/supabase-js"
 import {
   Toast,
   ToastDescription,
-  ToastMessage,
   ToastProvider,
   ToastTitle,
-  ToastVariant,
   ToastViewport
 } from "./components/ui/toast"
 import { ToastContext } from "./contexts/toast"
@@ -37,11 +35,11 @@ const queryClient = new QueryClient({
 
 // Root component that provides the QueryClient
 function App() {
-  const [toastOpen, setToastOpen] = useState(false)
-  const [toastMessage, setToastMessage] = useState<ToastMessage>({
+  const [toastState, setToastState] = useState({
+    open: false,
     title: "",
     description: "",
-    variant: "neutral"
+    variant: "neutral" as const
   })
   const [credits, setCredits] = useState<number>(0)
   const [currentLanguage, setCurrentLanguage] = useState<string>("python")
@@ -67,9 +65,17 @@ function App() {
 
   // Show toast method
   const showToast = useCallback(
-    (title: string, description: string, variant: ToastVariant) => {
-      setToastMessage({ title, description, variant })
-      setToastOpen(true)
+    (
+      title: string,
+      description: string,
+      variant: "neutral" | "success" | "error"
+    ) => {
+      setToastState({
+        open: true,
+        title,
+        description,
+        variant
+      })
     },
     []
   )
@@ -211,13 +217,15 @@ function App() {
           <AppContent isInitialized={isInitialized} />
           <UpdateNotification />
           <Toast
-            open={toastOpen}
-            onOpenChange={setToastOpen}
-            variant={toastMessage.variant}
-            duration={3000}
+            open={toastState.open}
+            onOpenChange={(open) =>
+              setToastState((prev) => ({ ...prev, open }))
+            }
+            variant={toastState.variant}
+            duration={1500}
           >
-            <ToastTitle>{toastMessage.title}</ToastTitle>
-            <ToastDescription>{toastMessage.description}</ToastDescription>
+            <ToastTitle>{toastState.title}</ToastTitle>
+            <ToastDescription>{toastState.description}</ToastDescription>
           </Toast>
           <ToastViewport />
         </ToastContext.Provider>

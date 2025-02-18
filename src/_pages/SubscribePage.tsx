@@ -65,7 +65,7 @@ export default function SubscribePage({ user }: SubscribePageProps) {
           </h2>
           <p className="text-gray-400 text-sm mt-2 mb-6">
             To continue using Interview Coder, you'll need to subscribe
-            ($20/month)
+            ($40/month)
           </p>
 
           {/* Keyboard Shortcuts */}

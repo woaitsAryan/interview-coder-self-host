@@ -483,12 +483,6 @@ const Solutions: React.FC<SolutionsProps> = ({
                 {solutionData && (
                   <>
                     <ContentSection
-                      title="Problem Statement"
-                      content={problemStatementData?.problem_statement}
-                      isLoading={!problemStatementData}
-                    />
-
-                    <ContentSection
                       title="My Thoughts"
                       content={
                         thoughtsData && (
