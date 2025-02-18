@@ -108,6 +108,7 @@ export class ProcessingHelper {
     console.log("Processing screenshots in view:", view)
 
     if (view === "queue") {
+      mainWindow.webContents.send(this.deps.PROCESSING_EVENTS.INITIAL_START)
       const screenshotQueue = this.screenshotHelper.getScreenshotQueue()
       console.log("Processing main queue screenshots:", screenshotQueue)
       if (screenshotQueue.length === 0) {
@@ -116,8 +117,6 @@ export class ProcessingHelper {
       }
 
       try {
-        mainWindow.webContents.send(this.deps.PROCESSING_EVENTS.INITIAL_START)
-
         // Initialize AbortController
         this.currentProcessingAbortController = new AbortController()
         const { signal } = this.currentProcessingAbortController
@@ -163,6 +162,10 @@ export class ProcessingHelper {
         )
         this.deps.setView("solutions")
       } catch (error: any) {
+        mainWindow.webContents.send(
+          this.deps.PROCESSING_EVENTS.INITIAL_SOLUTION_ERROR,
+          error
+        )
         console.error("Processing error:", error)
         if (axios.isCancel(error)) {
           mainWindow.webContents.send(
