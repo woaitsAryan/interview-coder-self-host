@@ -52,6 +52,7 @@ interface ElectronAPI {
   decrementCredits: () => Promise<void>
   onCreditsUpdated: (callback: (credits: number) => void) => () => void
   onOutOfCredits: (callback: () => void) => () => void
+  getPlatform: () => string
 }
 
 export const PROCESSING_EVENTS = {
@@ -249,7 +250,8 @@ const electronAPI = {
     return () => {
       ipcRenderer.removeListener("credits-updated", subscription)
     }
-  }
+  },
+  getPlatform: () => process.platform
 } as ElectronAPI
 
 // Before exposing the API

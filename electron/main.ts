@@ -310,7 +310,8 @@ async function createWindow(): Promise<void> {
 
   // Enhanced screen capture resistance
   state.mainWindow.setContentProtection(true)
-  state.mainWindow.setHiddenInMissionControl(true)
+  
+
   state.mainWindow.setVisibleOnAllWorkspaces(true, {
     visibleOnFullScreen: true
   })
@@ -319,6 +320,7 @@ async function createWindow(): Promise<void> {
   // Additional screen capture resistance settings
   if (process.platform === "darwin") {
     // Prevent window from being captured in screenshots
+    state.mainWindow.setHiddenInMissionControl(true)
     state.mainWindow.setWindowButtonVisibility(false)
     state.mainWindow.setBackgroundColor("#00000000")
 
