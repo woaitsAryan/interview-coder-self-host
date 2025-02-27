@@ -12,7 +12,7 @@ const execFileAsync = promisify(execFile)
 export class ScreenshotHelper {
   private screenshotQueue: string[] = []
   private extraScreenshotQueue: string[] = []
-  private readonly MAX_SCREENSHOTS = 5
+  private readonly MAX_SCREENSHOTS = 2
 
   private readonly screenshotDir: string
   private readonly extraScreenshotDir: string

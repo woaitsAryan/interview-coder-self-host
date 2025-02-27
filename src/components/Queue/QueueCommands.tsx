@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from "react"
 import { supabase } from "../../lib/supabase"
 import { useToast } from "../../contexts/toast"
 import { LanguageSelector } from "../shared/LanguageSelector"
-import { COMMAND_KEY } from '../../utils/platform'
+import { COMMAND_KEY } from "../../utils/platform"
 
 interface QueueCommandsProps {
   onTooltipVisibilityChange: (visible: boolean, height: number) => void
@@ -75,7 +75,11 @@ const QueueCommands: React.FC<QueueCommandsProps> = ({
             }}
           >
             <span className="text-[11px] leading-none truncate">
-              {screenshotCount === 0 ? "Take first screenshot" : "Screenshot"}
+              {screenshotCount === 0
+                ? "Take first screenshot"
+                : screenshotCount === 1
+                ? "Take second screenshot"
+                : "Reset first screenshot"}
             </span>
             <div className="flex gap-1">
               <button className="bg-white/10 rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
