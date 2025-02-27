@@ -65,7 +65,11 @@ export default function SubscribePage({ user }: SubscribePageProps) {
           </h2>
           <p className="text-gray-400 text-sm mt-2 mb-6">
             To continue using Interview Coder, you'll need to subscribe
-            ($40/month)
+            ($60/month)
+          </p>
+          <p className="text-gray-500 text-[11px] -mt-4 mb-6 italic">
+            * Undetectability may not work with some versions of MacOS. See our
+            help center for more details
           </p>
 
           {/* Keyboard Shortcuts */}

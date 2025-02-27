@@ -232,6 +232,7 @@ async function createWindow(): Promise<void> {
 
   const windowSettings: Electron.BrowserWindowConstructorOptions = {
     height: 600,
+    width: 400,
     x: state.currentX,
     y: 50,
     alwaysOnTop: true,
@@ -251,11 +252,12 @@ async function createWindow(): Promise<void> {
     backgroundColor: "#00000000",
     focusable: true,
     skipTaskbar: true,
-    type: "panel",
+    type: "normal",
     paintWhenInitiallyHidden: true,
     titleBarStyle: "hidden",
-    enableLargerThanScreen: true,
-    movable: true
+    enableLargerThanScreen: false,
+    movable: true,
+    resizable: true
   }
 
   state.mainWindow = new BrowserWindow(windowSettings)
