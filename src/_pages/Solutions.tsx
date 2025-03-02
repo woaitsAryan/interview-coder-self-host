@@ -10,6 +10,7 @@ import { ProblemStatementData } from "../types/solutions"
 import SolutionCommands from "../components/Solutions/SolutionCommands"
 import Debug from "./Debug"
 import { useToast } from "../contexts/toast"
+import { COMMAND_KEY } from "../utils/platform"
 
 export const ContentSection = ({
   title,
@@ -483,7 +484,7 @@ const Solutions: React.FC<SolutionsProps> = ({
                 {solutionData && (
                   <>
                     <ContentSection
-                      title="My Thoughts"
+                      title={`My Thoughts (${COMMAND_KEY} + Arrow keys to scroll)`}
                       content={
                         thoughtsData && (
                           <div className="space-y-3">

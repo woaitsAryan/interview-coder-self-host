@@ -298,7 +298,7 @@ async function createWindow(): Promise<void> {
   // Configure window behavior
   state.mainWindow.webContents.setZoomFactor(1)
   if (isDev) {
-    // state.mainWindow.webContents.openDevTools()
+    state.mainWindow.webContents.openDevTools()
   }
   state.mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     console.log("Attempting to open URL:", url)
@@ -471,10 +471,21 @@ function setWindowDimensions(width: number, height: number): void {
 // Environment setup
 function loadEnvVariables() {
   if (isDev) {
+    console.log("Loading env variables from:", path.join(process.cwd(), ".env"))
     dotenv.config({ path: path.join(process.cwd(), ".env") })
   } else {
+    console.log(
+      "Loading env variables from:",
+      path.join(process.resourcesPath, ".env")
+    )
     dotenv.config({ path: path.join(process.resourcesPath, ".env") })
   }
+  console.log("Loaded environment variables:", {
+    VITE_SUPABASE_URL: process.env.VITE_SUPABASE_URL ? "exists" : "missing",
+    VITE_SUPABASE_ANON_KEY: process.env.VITE_SUPABASE_ANON_KEY
+      ? "exists"
+      : "missing"
+  })
 }
 
 // Initialize application

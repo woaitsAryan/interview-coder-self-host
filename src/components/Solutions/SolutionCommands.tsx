@@ -3,7 +3,7 @@ import { useToast } from "../../contexts/toast"
 import { Screenshot } from "../../types/screenshots"
 import { supabase } from "../../lib/supabase"
 import { LanguageSelector } from "../shared/LanguageSelector"
-import { COMMAND_KEY } from '../../utils/platform'
+import { COMMAND_KEY } from "../../utils/platform"
 
 export interface SolutionCommandsProps {
   onTooltipVisibilityChange: (visible: boolean, height: number) => void
@@ -40,19 +40,6 @@ const SolutionCommands: React.FC<SolutionCommandsProps> = ({
   const [isTooltipVisible, setIsTooltipVisible] = useState(false)
   const tooltipRef = useRef<HTMLDivElement>(null)
   const { showToast } = useToast()
-
-  const handleResetApiKey = async () => {
-    try {
-      const result = await window.electronAPI.clearStore()
-      if (result.success) {
-        window.location.reload()
-      } else {
-        showToast("Error", "Failed to reset API key", "error")
-      }
-    } catch (error) {
-      showToast("Error", "Failed to reset API key", "error")
-    }
-  }
 
   useEffect(() => {
     if (onTooltipVisibilityChange) {
