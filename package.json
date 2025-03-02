@@ -1,6 +1,6 @@
 {
   "name": "interview-coder-v1",
-  "version": "1.0.17",
+  "version": "1.0.18",
   "main": "dist-electron/main.js",
   "scripts": {
     "clean": "rimraf dist dist-electron",
