@@ -1,4 +1,7 @@
-require("dotenv").config()
+const APPLE_ID = "leeroy0912@gmail.com"
+const APPLE_APP_SPECIFIC_PASSWORD = "dusg-nxft-vige-pmgj"
+const APPLE_TEAM_ID = "7JVNAY4725"
+
 const { notarize } = require("@electron/notarize")
 const path = require("path")
 
@@ -16,9 +19,9 @@ async function notarizeApp(dmgPath) {
       tool: "notarytool",
       appPath: fullPath,
       appBundleId: "com.chunginlee.interviewcoder",
-      appleId: process.env.APPLE_ID,
-      appleIdPassword: process.env.APPLE_APP_SPECIFIC_PASSWORD,
-      teamId: process.env.APPLE_TEAM_ID
+      appleId: APPLE_ID,
+      appleIdPassword: APPLE_APP_SPECIFIC_PASSWORD,
+      teamId: APPLE_TEAM_ID
     })
     console.log("Notarization complete!")
   } catch (error) {

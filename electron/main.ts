@@ -315,7 +315,7 @@ async function createWindow(): Promise<void> {
   state.mainWindow.setVisibleOnAllWorkspaces(true, {
     visibleOnFullScreen: true
   })
-  state.mainWindow.setAlwaysOnTop(true, "floating", 1)
+  state.mainWindow.setAlwaysOnTop(true, "screen-saver", 1)
 
   // Additional screen capture resistance settings
   if (process.platform === "darwin") {
@@ -377,7 +377,7 @@ function hideMainWindow(): void {
     state.windowPosition = { x: bounds.x, y: bounds.y }
     state.windowSize = { width: bounds.width, height: bounds.height }
     state.mainWindow.setIgnoreMouseEvents(true, { forward: true })
-    state.mainWindow.setAlwaysOnTop(true, "floating", 1)
+    state.mainWindow.setAlwaysOnTop(true, "screen-saver", 1)
     state.mainWindow.setVisibleOnAllWorkspaces(true, {
       visibleOnFullScreen: true
     })
@@ -396,7 +396,7 @@ function showMainWindow(): void {
       })
     }
     state.mainWindow.setIgnoreMouseEvents(false)
-    state.mainWindow.setAlwaysOnTop(true, "floating", 1)
+    state.mainWindow.setAlwaysOnTop(true, "screen-saver", 1)
     state.mainWindow.setVisibleOnAllWorkspaces(true, {
       visibleOnFullScreen: true
     })

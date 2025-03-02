@@ -8,14 +8,6 @@ import { IIpcHandlerDeps } from "./main"
 export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
   console.log("Initializing IPC handlers")
 
-  // Create Supabase client when needed
-  const createSupabaseClient = () => {
-    return createClient(
-      process.env.VITE_SUPABASE_URL!,
-      process.env.VITE_SUPABASE_ANON_KEY!
-    )
-  }
-
   // Credits handlers
   ipcMain.handle("set-initial-credits", async (_event, credits: number) => {
     const mainWindow = deps.getMainWindow()
