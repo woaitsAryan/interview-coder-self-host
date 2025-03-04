@@ -6,10 +6,7 @@ import axios from "axios"
 import { app } from "electron"
 import { BrowserWindow } from "electron"
 
-const isDev = !app.isPackaged
-const API_BASE_URL = isDev
-  ? "http://localhost:3000"
-  : "https://www.interviewcoder.co"
+const API_BASE_URL = "http://localhost:8000"
 
 export class ProcessingHelper {
   private deps: IProcessingHelperDeps
@@ -296,6 +293,8 @@ export class ProcessingHelper {
 
             // Generate solutions after successful extraction
             const solutionsResult = await this.generateSolutionsHelper(signal)
+
+            console.log("Solutions result:", solutionsResult.data)
             if (solutionsResult.success) {
               // Clear any existing extra screenshots before transitioning to solutions view
               this.screenshotHelper.clearExtraScreenshotQueue()
