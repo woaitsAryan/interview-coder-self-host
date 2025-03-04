@@ -6,6 +6,8 @@
     "clean": "rimraf dist dist-electron",
     "dev": "cross-env NODE_ENV=development npm run clean && concurrently \"tsc -w -p tsconfig.electron.json\" \"vite\" \"wait-on http://localhost:54321 && electron .\"",
     "build": "cross-env NODE_ENV=production rimraf dist dist-electron && vite build && tsc -p tsconfig.electron.json && electron-builder",
+    "build:mac": "cross-env NODE_ENV=production rimraf dist dist-electron && vite build && tsc -p tsconfig.electron.json && electron-builder --mac",
+    "build:linux": "cross-env NODE_ENV=production rimraf dist dist-electron && vite build && tsc -p tsconfig.electron.json && electron-builder --linux",
     "db:push": "supabase db push",
     "db:migrate": "supabase db reset",
     "db:studio": "supabase db studio",
