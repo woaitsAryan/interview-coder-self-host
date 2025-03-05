@@ -1,7 +1,11 @@
 import { Hono } from 'hono'
+import { logger } from 'hono/logger'
+
 import { extractController, generateController, debugController } from './controllers'
 
 const app = new Hono()
+
+app.use(logger())
 
 app.post('/api/debug', debugController)
 app.post('/api/generate', generateController)

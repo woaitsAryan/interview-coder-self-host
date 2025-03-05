@@ -15,7 +15,8 @@
     "backend:build": "bun build backend/src/index.ts --outdir backend/dist --target bun",
     "backend:start": "bun run backend/dist/index.js",
     "compose:build": "env-cmd -f .env.local -- docker compose -f compose.yaml build",
-    "compose:up": "env-cmd -f .env.local -- docker compose -f compose.yaml up"
+    "compose:up": "env-cmd -f .env.local -- docker compose -f compose.yaml up",
+    "compose:down": "env-cmd -f .env.local -- docker compose -f compose.yaml down"
   },
   "build": {
     "appId": "com.chunginlee.interviewcoder",
