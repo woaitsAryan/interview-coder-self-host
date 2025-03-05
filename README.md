@@ -71,6 +71,11 @@ Go to releases/ folder and then find your .exe or .dmg or whatever and install i
 
 That's it? yay! Just use your email to sign in, don't use google auth preferably or you'll have to set that up. Verify your email and you're good to go.
 
+### Some small caveats/issues you might experience:
+
+- If you are running the app in dev using `bun run dev` so it'll open the developer console too by default so make sure to close that if you don't need it.
+- I don't know how to close this app lol, I just go to process manager and kill it
+
 
 ## Invisibility Compatibility
 
