@@ -1,12 +1,29 @@
 import { Context } from "hono";
-import { ProblemInfoSchema } from "../types/problem-info";
+import { GenerateInput, GenerateInputSchema } from "../types/problem-info";
 import { anthropic } from "../configs/claude";
 import { SolutionSchema } from "../types/solution";
 
 export async function generateController(c: Context) {
   const body = await c.req.json()
 
-  const language = body.language
+  const { language, problemInfo } = GenerateInputSchema.parse(body)
+
+  const answer = await generateSolution({ language, problemInfo })
+  return c.json({
+    success: true,
+    ...answer
+  });
+}
+
+async function generateSolution(data: GenerateInput) {
+  const { language, problemInfo } = data
+
+  const prompt = `
+  You are a helpful assistant that can help me solve a coding problem.
+  Here is the problem statement:
+  ${JSON.stringify(problemInfo)}
+  Generate a solution for the problem in ${language} language.
+  `
 
   const response = await anthropic.messages.create({
     model: "claude-3-7-sonnet-latest",
@@ -47,8 +64,7 @@ export async function generateController(c: Context) {
       {
         role: "user",
         content: [
-          { type: "text", text: "Here is the problem statement: " + JSON.stringify(body) },
-          { type: "text", text: "Generate the solution in " + language + " language." }
+          { type: "text", text: prompt }
         ]
       }
     ]
@@ -64,8 +80,6 @@ export async function generateController(c: Context) {
 
   const answer = SolutionSchema.parse(toolResponse.input)
 
-  return c.json({
-    success: true,
-    ...answer
-  });
+  return answer
 }
+

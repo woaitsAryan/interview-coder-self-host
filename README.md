@@ -1,11 +1,76 @@
-# Interview Coder
+# Interview Coder (but now self-hostable)
 
 An invisible desktop application that will help you pass your technical interviews.
 
 https://www.interviewcoder.co
 
-
 https://github.com/user-attachments/assets/0615b110-2670-4b0e-bc69-3c32a2d8a996
+
+## How to self host for free?
+
+For image -> text translation, I went with gpt-4o. For answer generation, I've used claude 3.7 sonnet becauses it's the best. Both of these is easily changeable, and you can modify our own prompts too at backend/src/controllers
+
+### Requirements
+
+- OpenAI API key
+- Anthropic API key
+- Supabase account (for auth and database). We need `SUPABASE_URL` and `SUPABASE_ANON_KEY`. Also supabase CLI installed
+- Docker (optional, for hosting backend)
+- Bun installed (https://bun.sh/docs/installation)
+
+### Steps
+
+1. Clone the repository
+
+```bash
+git clone https://github.com/woaitsAryan/interview-coder-self-host
+cd interview-coder-self-host
+
+bun install
+```
+
+2. Create `.env` files file and populate with your credentials
+
+```bash
+cp .env.sample .env
+cp .env.local.sample .env.local
+```
+
+3. Do supabase login and migrations
+
+```bash
+supabase login
+supabase db push
+```
+
+4. Build the app for your platform
+
+For this step, remember that whatever BACKEND_URL is in .env will be used as the backend url for the app. If you want to self-host it with a domain name, you'll have to change the URL and re-build this
+
+```bash
+bun run build
+```
+
+5. Run the backend
+
+Either run it directly with bun:
+
+```bash
+bun run backend:dev
+```
+
+Or run it with docker:
+
+```bash
+bun run compose:build && bun run compose:up
+```
+
+6. Install the app
+
+Go to releases/ folder and then find your .exe or .dmg or whatever and install it. 
+
+That's it? yay! Just use your email to sign in, don't use google auth preferably or you'll have to set that up. Verify your email and you're good to go.
+
 
 ## Invisibility Compatibility
 

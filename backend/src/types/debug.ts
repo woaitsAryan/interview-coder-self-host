@@ -15,3 +15,6 @@ export const DebugOutputSchema = z.object({
   time_complexity: z.string(),
   space_complexity: z.string()
 })
+
+export type DebugInput = z.infer<typeof DebugInputSchema>
+export type DebugOutput = z.infer<typeof DebugOutputSchema>

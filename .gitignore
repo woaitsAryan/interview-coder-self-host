@@ -3,7 +3,7 @@ dist-electron
 release
 dist
 .env
-.env.*
+.env.local
 **/.DS_Store
 **/.vscode
 **/.idea
