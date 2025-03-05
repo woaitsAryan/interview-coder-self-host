@@ -1,0 +1,22 @@
+services:
+  backend-interview-coder:
+    build:
+      context: .
+      dockerfile: backend.Dockerfile
+    container_name: backend-interview-coder
+    restart: always
+    env_file:
+      - .env.local
+    ports:
+      - ${BACKEND_PORT}:${BACKEND_PORT}
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "http://127.0.0.1:${BACKEND_PORT}/ping"]
+      interval: 1m
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "200k"
+        max-file: "10"

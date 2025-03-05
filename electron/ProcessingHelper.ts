@@ -6,7 +6,7 @@ import axios from "axios"
 import { app } from "electron"
 import { BrowserWindow } from "electron"
 
-const API_BASE_URL = "http://localhost:8000"
+const API_BASE_URL = process.env.VITE_BACKEND_URL || "http://localhost:8000"
 
 export class ProcessingHelper {
   private deps: IProcessingHelperDeps

@@ -13,7 +13,9 @@
     "db:studio": "supabase db studio",
     "backend:dev": "bun run --hot backend/src/index.ts",
     "backend:build": "bun build backend/src/index.ts --outdir backend/dist --target bun",
-    "backend:start": "bun run backend/dist/index.js"
+    "backend:start": "bun run backend/dist/index.js",
+    "compose:build": "env-cmd -f .env.local -- docker compose -f compose.yaml build",
+    "compose:up": "env-cmd -f .env.local -- docker compose -f compose.yaml up"
   },
   "build": {
     "appId": "com.chunginlee.interviewcoder",
