@@ -46,29 +46,6 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   }
 })
 
-export const signInWithGoogle = async () => {
-  try {
-    console.log("Initiating Google sign in...")
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: window.location.origin
-      }
-    })
-
-    if (error) {
-      console.error("Google sign in error:", error)
-      throw error
-    }
-
-    console.log("Google sign in response:", data)
-    return data
-  } catch (error) {
-    console.error("Unexpected error during Google sign in:", error)
-    throw error
-  }
-}
-
 let channel: ReturnType<typeof supabase.channel> | null = null
 
 // Monitor auth state changes and manage realtime connection

@@ -1,8 +1,8 @@
-# Interview Coder (but now self-hostable)
+# Interview Coder (but now self-hostable and free)
 
 An invisible desktop application that will help you pass your technical interviews.
 
-https://www.interviewcoder.co
+https://www.interviewcoder.co (explains all the features)
 
 https://github.com/user-attachments/assets/0615b110-2670-4b0e-bc69-3c32a2d8a996
 
@@ -12,11 +12,11 @@ For image -> text translation, I went with gpt-4o. For answer generation, I've u
 
 ### Requirements
 
+- Bun installed (https://bun.sh/docs/installation)
 - OpenAI API key
 - Anthropic API key
 - Supabase account (for auth and database). We need `SUPABASE_URL` and `SUPABASE_ANON_KEY`. Also supabase CLI installed
 - Docker (optional, for hosting backend)
-- Bun installed (https://bun.sh/docs/installation)
 
 ### Steps
 
@@ -29,14 +29,14 @@ cd interview-coder-self-host
 bun install
 ```
 
-2. Create `.env` files file and populate with your credentials
+1. Create `.env` files and populate with the appropriate credentials
 
 ```bash
 cp .env.sample .env
 cp .env.local.sample .env.local
 ```
 
-3. Do supabase login and migrations
+3. Login with your supabase CLI and do migrations
 
 ```bash
 supabase login
@@ -45,13 +45,13 @@ supabase db push
 
 4. Build the app for your platform
 
-For this step, remember that whatever BACKEND_URL is in .env will be used as the backend url for the app. If you want to self-host it with a domain name, you'll have to change the URL and re-build this
+For this step, remember that whatever BACKEND_URL is in .env will be used as the backend url for the app. If you want to self-host it in a server, you'll have to change the URL and re-build this
 
 ```bash
 bun run build
 ```
 
-5. Run the backend
+1. Run the backend
 
 Either run it directly with bun:
 
@@ -69,13 +69,14 @@ bun run compose:build && bun run compose:up
 
 Go to releases/ folder and then find your .exe or .dmg or whatever and install it. 
 
-That's it? yay! Just use your email to sign in, don't use google auth preferably or you'll have to set that up. Verify your email and you're good to go.
+On install, you'll see a sign in page, click on the sign-up button, I'd recommend to just disable email otp, so you can directly sign up with email. After sign-up, it will just work
+
+That's it? yay! Do as you plesae!
 
 ### Some small caveats/issues you might experience:
 
 - If you are running the app in dev using `bun run dev` so it'll open the developer console too by default so make sure to close that if you don't need it.
 - I don't know how to close this app lol, I just go to process manager and kill it
-
 
 ## Invisibility Compatibility
 
@@ -150,7 +151,7 @@ The application uses unidentifiable global keyboard shortcuts that won't be dete
 
 - Node.js (v16 or higher)
 - npm or bun package manager
-- Subscription on https://www.interviewcoder.co/settings
+- Subscription on https://www.interviewcoder.co/settings (not needed for self-hosting)
 - Screen Recording Permission for Terminal/IDE
   - On macOS:
     1. Go to System Preferences > Security & Privacy > Privacy > Screen Recording
@@ -161,37 +162,6 @@ The application uses unidentifiable global keyboard shortcuts that won't be dete
   - On Linux:
     - May require `xhost` access depending on your distribution
 
-## Installation
-
-1. Clone the repository:
-
-```bash
-git clone https://github.com/ibttf/interview-coder-v1.git
-cd interview-coder-v1
-```
-
-2. Install dependencies:
-
-```bash
-npm install
-# or if using bun
-bun install
-```
-
-## Running Locally
-
-1. Start the development server:
-
-```bash
-npm run dev
-```
-
-This will:
-
-- Start the Vite development server
-- Launch the Electron application
-- Enable hot-reloading for development
-
 ## Tech Stack
 
 - Electron
@@ -201,20 +171,6 @@ This will:
 - Tailwind CSS
 - Radix UI Components
 - OpenAI API
-
-## Configuration
-
-1. On first launch, you'll need to provide your OpenAI API key
-2. The application will store your settings locally using electron-store
-
-## Building (for Roy)
-
-after npm run build, hit:
-
-```
-node scripts/manual-notarize.js "release/Interview-Coder-x64.dmg" && xcrun stapler staple "release/Interview-Coder-x64.dmg"
-node scripts/manual-notarize.js "release/Interview-Coder-arm64.dmg" && xcrun stapler staple "release/Interview-Coder-arm64.dmg"
-```
 
 ## Contributing
 
